@@ -1,0 +1,21 @@
+{
+  "name": "fitbit-air-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prayer-aware smart wake app powered by Google Fitbit Air sleep data",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w server && npm run build -w web",
+    "test": "npm test -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
