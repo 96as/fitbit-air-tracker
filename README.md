@@ -27,9 +27,11 @@ missed prayer.
 ## Repository layout
 
 ```
+CLAUDE.md              Working guide for AI assistants: invariants, gotchas, verify steps
 docs/SPEC.md           Product spec: features, user flows, alarm policies
 docs/ARCHITECTURE.md   System design, data model, sequence diagrams
 docs/INTEGRATIONS.md   Google Health API, Aladhan, Web Push — auth, limits, deadlines
+docs/ROADMAP.md        Ordered next tasks with acceptance criteria — start here to contribute
 server/                Fastify + TypeScript backend (wake engine, providers, REST, MCP stub)
 web/                   React + Vite PWA (dashboard, settings, bedside mode alarm)
 ```
@@ -51,10 +53,12 @@ you're ready to connect a real device (see `docs/INTEGRATIONS.md`).
 ## Status / roadmap
 
 - [x] Phase 0 — Spec + scaffold (this)
-- [ ] Phase 1 — Prayer timetable + reliable PWA alarms (push + bedside mode)
+- [ ] Phase 1 — Harden alarms & complete the MVP UX
 - [ ] Phase 2 — Google Health API OAuth + real sleep ingestion
-- [ ] Phase 3 — Smart wake engine hardened with real-device data
-- [ ] Phase 4 — Insights, bedtime advisor, Qiyam/Ramadan modes, MCP server for AI agents
+- [ ] Phase 3 — Smarter waking: autotuning, back-to-sleep, bedtime advisor, Ramadan mode
+- [ ] Phase 4 — AI-agent surface: MCP server + data export
+
+Task-level breakdown with acceptance criteria: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Key platform constraints (why the design looks like this)
 
