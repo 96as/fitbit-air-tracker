@@ -1,0 +1,19 @@
+{
+  "dataPoints": [
+    {
+      "name": "users/me/dataTypes/sleep/dataPoints/44598781200",
+      "sleep": {
+        "interval": { "startTime": "2026-07-04T20:30:00Z", "endTime": "2026-07-04T23:45:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+        "type": "STAGES",
+        "stages": [
+          { "type": "LIGHT", "startTime": "2026-07-04T20:30:00Z", "endTime": "2026-07-04T20:50:00Z" },
+          { "type": "DEEP", "startTime": "2026-07-04T20:50:00Z", "endTime": "2026-07-04T21:40:00Z" },
+          { "type": "LIGHT", "startTime": "2026-07-04T21:40:00Z", "endTime": "2026-07-04T22:00:00Z" },
+          { "type": "REM", "startTime": "2026-07-04T22:00:00Z", "endTime": "2026-07-04T22:25:00Z" },
+          { "type": "LIGHT", "startTime": "2026-07-04T22:25:00Z", "endTime": "2026-07-04T23:45:00Z" }
+        ],
+        "metadata": { "processed": false, "nap": false, "mainSleep": true, "stagesStatus": "STAGES_STATE_UNSPECIFIED" }
+      }
+    }
+  ]
+}
