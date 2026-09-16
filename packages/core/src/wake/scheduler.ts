@@ -29,13 +29,19 @@ const MINUTE_MS = 60_000;
  */
 export class WakeScheduler {
   private alarms: ScheduledAlarm[] = [];
-  private timer?: NodeJS.Timeout;
+  private timer?: ReturnType<typeof setInterval>;
   private ticking = false;
 
   constructor(private readonly opts: WakeSchedulerOptions) {}
 
+  /** Arm an alarm anchored to a prayer time (deadline = prayer − offset). */
   schedule(policy: AlarmPolicy, prayerTimeUtc: Date): ScheduledAlarm {
     const deadlineUtc = new Date(prayerTimeUtc.getTime() - policy.deadlineOffsetMinutes * MINUTE_MS);
+    return this.scheduleDeadline(policy, deadlineUtc, prayerTimeUtc);
+  }
+
+  /** Arm an alarm with an explicit hard deadline (custom wake times, demos). */
+  scheduleDeadline(policy: AlarmPolicy, deadlineUtc: Date, prayerTimeUtc: Date = deadlineUtc): ScheduledAlarm {
     const alarm: ScheduledAlarm = {
       policy,
       prayerTimeUtc,
@@ -91,7 +97,7 @@ export class WakeScheduler {
   startTicking(intervalMs = 30_000): void {
     this.stopTicking();
     this.timer = setInterval(() => void this.tick(), intervalMs);
-    this.timer.unref?.();
+    (this.timer as { unref?: () => void }).unref?.(); // Node only; no-op on browsers/Hermes
   }
 
   stopTicking(): void {

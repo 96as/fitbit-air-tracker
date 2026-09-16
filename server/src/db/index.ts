@@ -10,7 +10,7 @@ import type {
   SleepSession,
   SleepStage,
   User,
-} from '../types.js';
+} from '@fitbit-air-tracker/core';
 
 /**
  * Thin data-access layer over SQLite (node:sqlite, zero native deps).

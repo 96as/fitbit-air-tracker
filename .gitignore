@@ -222,3 +222,8 @@ node_modules/
 
 # Local runtime data (SQLite)
 server/data/
+
+# Expo native projects are generated (npx expo prebuild) — never commit them
+mobile/ios/
+mobile/android/
+mobile/.expo/

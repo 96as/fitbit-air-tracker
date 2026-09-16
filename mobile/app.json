@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "SmartWake",
+    "slug": "smartwake",
+    "scheme": "smartwake",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.smartwake.prayer",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAlarmKitUsageDescription": "SmartWake schedules alarms that ring until you stop them, so you never miss Fajr.",
+        "NSLocationWhenInUseUsageDescription": "Your location is used only to compute local prayer times.",
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "android": {
+      "package": "com.smartwake.prayer",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-build-properties", { "ios": { "deploymentTarget": "26.0" } }],
+      ["expo-notifications", { "sounds": ["./assets/alarm.wav"] }],
+      "expo-audio",
+      "expo-location",
+      "expo-background-task",
+      "expo-dev-client"
+    ]
+  }
+}

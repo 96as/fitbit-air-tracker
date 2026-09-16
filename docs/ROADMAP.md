@@ -15,7 +15,55 @@ Conventions for every task:
 
 ---
 
-## Phase 1 — Harden alarms & complete the MVP UX (no external access needed)
+## Phase M — iPhone app (primary product; see docs/MOBILE.md)
+
+### [x] M1 Standalone Expo app with AlarmKit, custom wake times, Bedside smart wake, backup chain
+Done: `mobile/` + shared `packages/core`. Verified by type-check, Metro bundle
+and prebuild; needs a first real run on a Mac (`npx expo run:ios --device`).
+
+### [ ] M1.1 First device run + fixes
+Run on the iPhone per docs/MOBILE.md §1. Expected rough edges to check and fix:
+AlarmKit permission prompt appears; a custom alarm 2 min ahead rings with the
+phone locked and keeps ringing until Stop; Bedside "Demo night" rings in-app
+and "I'm awake" stops sound+haptics; Settings ▸ Use my location updates prayer
+times. Record anything broken as tasks here.
+**Accept:** all four behaviors confirmed on device; screenshots in the PR.
+
+### [ ] M2 Real Fitbit Air data on the phone (Google Health API, on-device OAuth)
+**Gate: user confirms Google Health API developer access.** Implement
+`mobile/src/services/googleHealthProvider.ts` behind `SleepDataProvider`:
+OAuth 2.0 with PKCE via `expo-auth-session` (no client secret on device),
+tokens in `expo-secure-store`, `getLatestSamples` polling the intraday
+sleep-stage + heart-rate endpoints (≥ 60 s apart) while Bedside mode is armed;
+`getSessions` for history into `store.sessions`. Provider choice in Settings.
+Field mapping notes: `server/src/providers/googleHealth/index.ts` + docs/INTEGRATIONS.md §1.
+**Accept:** recorded-fixture unit test for the mapping (fixtures committed);
+a real night visible in Tonight; Bedside fires from real stages.
+
+### [ ] M3 Back-to-sleep detection + wake-ease feedback on the phone
+After "I'm awake", keep the provider polling for 30 min (Bedside stays armed);
+new sleep onset → re-ring once. Add the 👍/👎 "was waking easy?" card on
+Tonight the morning after a dismissed alarm → `events[]` (`wake.feedback`).
+**Accept:** simulation test in core (mock night resumes after dismiss → one
+re-fire); feedback appears in events.
+
+### [ ] M4 Apple Watch / HealthKit sleep as an alternative provider
+For users without a Fitbit: read sleep stages from HealthKit (`react-native-health`
+or an Expo module; free personal team allows the HealthKit capability).
+Same `SleepDataProvider` interface.
+
+### [ ] M5 Export + sync
+"Export data" (share sheet, JSON of settings/alarms/sessions/events) and
+optional sync of `events[]`/sessions to the server's `event_log`/tables so the
+MCP/agent surface (Phase 4) sees phone data.
+
+### [ ] M6 Android build
+Alarm tier 1 on Android = `AlarmManager` exact alarms + full-screen intent
+(`expo-alarm` or a small native module); notification channel already exists.
+
+---
+
+## Phase 1 — Web client: harden alarms & complete the MVP UX (no external access needed)
 
 ### [ ] 1.1 Server-side snooze re-fire with maxSnoozes cap
 Currently snooze only re-arms the Bedside page locally; push users never get a

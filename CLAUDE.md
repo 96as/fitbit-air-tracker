@@ -9,47 +9,71 @@ the source of truth; `docs/ROADMAP.md` tells you exactly what to build next.
 
 Wakes a Muslim user for prayer (primarily Fajr) at the easiest physiological
 moment: during **light sleep**, inside a window before the prayer time, using
-Google Fitbit Air sleep data + daily Aladhan prayer times. TypeScript monorepo:
-`server/` (Fastify API + wake engine) and `web/` (React PWA).
+Google Fitbit Air sleep data + daily Aladhan prayer times — with alarms that
+ring until stopped, custom wake times, and a backup chain. TypeScript monorepo:
+
+- `packages/core/` — **the engine** (pure TS, no platform APIs): decision rule,
+  scheduler, alarm planner, mock Fitbit Air, Aladhan client, tz helpers. Tests live here.
+- `mobile/` — **the primary product**: standalone Expo/React Native iPhone app
+  (iOS 26 AlarmKit). See `docs/MOBILE.md`.
+- `server/` + `web/` — optional Fastify API + React PWA sharing the same engine;
+  the server is also the future AI-agent (MCP) surface.
 
 ## Commands
 
 ```bash
-npm install        # root — installs both workspaces (npm workspaces)
-npm run dev        # starts server :3001 + web :5173 (vite proxies /api → 3001)
-npm test           # server unit tests (vitest) — MUST pass before commit
-npm run build      # tsc for both + vite build — MUST pass before commit
-npm run vapid -w server   # generate Web Push VAPID keys for server/.env
+npm install        # root — installs all workspaces (npm workspaces)
+npm test           # engine tests in packages/core (vitest) — MUST pass before commit
+npm run build      # core → server → web builds + mobile type-check — MUST pass before commit
+npm run dev        # (web path) builds core, starts server :3001 + web :5173
+npm run vapid -w server   # Web Push VAPID keys for server/.env (web client only)
+
+# iPhone app — only on a Mac with Xcode 26 (see docs/MOBILE.md):
+npm run build -w packages/core && cd mobile && npx expo prebuild --platform ios && npx expo run:ios --device
+# iPhone app — what CAN be verified on Linux/CI:
+cd mobile && npx tsc --noEmit && npx expo export --platform ios && npx expo prebuild --platform ios --no-install
 ```
 
-Requires **Node >= 22.5** (uses built-in `node:sqlite`; the
+Requires **Node >= 22.5** (server uses built-in `node:sqlite`; the
 "SQLite is an experimental feature" warning at startup is expected — ignore it).
+**Build order matters:** `packages/core` must be built (`dist/`) before the
+server, web or mobile app can resolve `@fitbit-air-tracker/core`.
 
 ## Hard invariants — never break these
 
 1. **The alarm always fires by the hard deadline**, even with zero sleep data,
    no network, or a dead provider. Every code path in `server/src/wake/` must
    preserve this. `decide()` checks the deadline FIRST for this reason.
-2. **Nothing outside `server/src/providers/` may import a concrete provider.**
+2. **Nothing outside a provider module may import a concrete provider.**
    All sleep data flows through the `SleepDataProvider` interface
-   (`server/src/providers/types.ts`). This keeps the app runnable without
-   Google API access (mock mode) — the default and CI mode.
+   (`packages/core/src/providers/types.ts`). This keeps every client runnable
+   without Google API access (mock mode) — the default and CI mode.
 3. **All stored timestamps are ISO-8601 UTC** (`...Z`). Local wall time is
    derived at the edge via the user's IANA `tz`. Prayer times are stored as
    resolved UTC instants (`prayer_timetable.time_utc`).
 4. **All SQL lives in `server/src/db/index.ts`** (the DAL). Business logic
    never touches SQLite directly. Schema is `server/src/db/schema.sql`
    (CREATE TABLE IF NOT EXISTS style — additive migrations only for now).
-5. **`decide()` in `server/src/wake/decide.ts` stays a pure function** — no IO,
-   no clocks, no randomness. The injectable `Clock` (`server/src/types.ts`) is
-   how the scheduler and mock provider see time; tests use a fake clock to
-   simulate whole nights in milliseconds. Never call `new Date()` /
-   `Date.now()` inside engine or provider logic — use the injected clock.
+   On the phone the equivalent is `mobile/src/store.ts` (persisted JSON with
+   the same shapes/event vocabulary) — keep them aligned.
+5. **`packages/core` stays platform-neutral and `decide()` stays pure.** No
+   Node (`node:*`), React Native or DOM-only APIs in core (its tsconfig has
+   `types: []` on purpose — the build fails if you slip). No IO, clocks or
+   randomness in `decide()`. Time comes from the injectable `Clock`
+   (`packages/core/src/types.ts`); tests use a fake clock to simulate whole
+   nights in milliseconds. Never call `new Date()` / `Date.now()` inside engine
+   or provider logic — use the injected clock. Planning is pure too
+   (`alarms/plan.ts`): the phone/server just executes the plan.
 6. **The Google Health webhook receiver must ACK in < 5 s** (platform rule).
    It responds 204 immediately and does work via `setImmediate` — keep it that way.
-7. **REST API = agent API.** The frontend uses the same `/api/v1` endpoints a
-   future AI agent will use (MCP tool definitions in `server/src/mcp/index.ts`
+7. **REST API = agent API.** The web frontend uses the same `/api/v1` endpoints
+   a future AI agent will use (MCP tool definitions in `server/src/mcp/index.ts`
    map onto the same services). Don't add frontend-only backdoors.
+8. **iPhone alarm tiers must all keep working** after any mobile change:
+   AlarmKit deadline alarm (rings until stopped, app closed), Bedside in-app
+   alarm (sound + haptics until "I'm awake"), backup notification chain.
+   `replan()` in `mobile/src/services/replan.ts` is idempotent (cancel-all then
+   re-arm) — keep it that way; call it after any change to alarms/settings.
 
 ## Platform facts (researched, do not re-litigate)
 
@@ -60,15 +84,30 @@ Requires **Node >= 22.5** (uses built-in `node:sqlite`; the
   target the **Google Health API** (Phase 2, see docs/INTEGRATIONS.md §1).
 - Aladhan API is called with **`iso8601=true`** so timings arrive with UTC
   offsets — never do manual timezone math on prayer times.
-- Web pages can't ring native alarms on locked phones. Delivery is tiered:
+- Web pages can't ring native alarms on locked phones. Web delivery is tiered:
   Web Push (escalating repeats) + Bedside Mode (client-side deadline countdown
   + Web Audio, works offline). Both must keep working after any change.
+- **iOS 26 AlarmKit** is the only way a third-party iPhone app gets alarms that
+  ring until stopped with the app closed. It needs Xcode 26, iOS 26, the
+  `NSAlarmKitUsageDescription` Info.plist key, and a dev build (not Expo Go).
+- **Free Apple ID (personal team):** 7-day re-sign, **no push notifications**,
+  **no App Groups** → that's why `react-native-nitro-ios-alarm-kit` was chosen
+  over `expo-alarm-kit` (which needs App Groups), and why the smart early wake
+  runs in the foreground (Bedside mode) instead of via push.
+- iOS caps pending local notifications at 64 → the backup chain (21
+  notifications) is attached to the *next* alarm only (`planAlarms`).
 
 ## Code conventions
 
-- Server is **ESM with NodeNext resolution**: relative imports MUST end in
-  `.js` (e.g. `import { decide } from './decide.js'` — yes, `.js` even though
-  the file is `.ts`). Forgetting this breaks the build.
+- `packages/core` and `server` are **ESM with NodeNext resolution**: relative
+  imports MUST end in `.js` (e.g. `import { decide } from './decide.js'` — yes,
+  `.js` even though the file is `.ts`). Forgetting this breaks the build.
+  Mobile/web import the package by name: `@fitbit-air-tracker/core`.
+- Mobile: Expo SDK 57 / React 19 / TypeScript 6. `useRef<T>()` needs an initial
+  value (`useRef<T | undefined>(undefined)`). Metro can't resolve `.js`-suffixed
+  relative imports to `.ts` — that's why core is consumed via its built `dist/`.
+  `npx expo install` may fail behind proxies; pin versions from
+  `mobile/node_modules/expo/bundledNativeModules.json` and use plain `npm install -w mobile`.
 - Server build copies `schema.sql` into `dist/db/` (see `server/package.json`
   build script). If you add non-TS assets under `src/`, extend that copy step.
 - `server/tsconfig.json` **excludes `*.test.ts`** from the build; tests run via
@@ -86,15 +125,24 @@ Requires **Node >= 22.5** (uses built-in `node:sqlite`; the
 ## Map of the code
 
 ```
+packages/core/src/
+  index.ts          barrel — everything below is exported from '@fitbit-air-tracker/core'
+  types.ts          domain types (AlarmPolicy, WakeAlarm, SleepSample…) + Clock
+  wake/decide.ts    PURE decision rule (deadline → staleness → stage → HR-rise → wait)
+  wake/scheduler.ts windows + ticks; schedule(policy, prayerTime) / scheduleDeadline(policy, deadline)
+  alarms/plan.ts    PURE planner: WakeAlarm[] + timings → deadlines/windows/chain for N days
+  prayer/aladhan.ts HTTP client (iso8601=true) · prayer/next.ts nextOccurrence + timingKeyForPrayer
+  providers/        types.ts (the seam) · mock/ (Fitbit Air simulator)
+  util/tz.ts        Intl-only timezone helpers (wallTimeToUtc, localDateString…)
+  **/*.test.ts      decide, simulation (full nights), plan
+mobile/             see docs/MOBILE.md §5 for the file map
 server/src/
   index.ts          bootstrap: config → db → provider → scheduler → cron → fastify
   types.ts          shared domain types + Clock
   config.ts, env.ts env/config loading (.env is optional)
   db/               schema.sql + Db class (ALL SQL lives here)
-  providers/        types.ts (the seam) · mock/ (simulator) · googleHealth/ (Phase-2 stub)
-  prayer/           aladhan.ts (HTTP client) · timetable.ts (cache + nextOccurrence)
-  wake/             decide.ts (PURE decision rule) · scheduler.ts (windows + ticks)
-                    decide.test.ts · simulation.test.ts (accelerated full nights)
+  providers/googleHealth/  Phase-2 stub (server-side Google Health provider)
+  prayer/timetable.ts      DB-cached timetable over the core Aladhan client
   push/webpush.ts   VAPID sender + 60 s escalation until ack
   api/routes.ts     /api/v1 REST + webhook receiver + /demo/fire-test
   mcp/index.ts      MCP tool definitions (Phase-4 wiring pending)
@@ -107,9 +155,13 @@ web/public/sw.js    service worker: push handler + notification actions
 ## How to verify changes (do this before committing)
 
 1. `npm run build && npm test` — both must be clean.
-2. Engine changes: the two tests in `server/src/wake/simulation.test.ts` are
-   the safety net — they simulate full nights (light-sleep fire AND
-   deadline-fallback). Extend them when you change engine behavior.
+2. Engine changes: `packages/core/src/wake/simulation.test.ts` is the safety
+   net — it simulates full nights (light-sleep fire AND deadline-fallback);
+   `alarms/plan.test.ts` covers custom/prayer planning + the chain. Extend
+   them when you change engine behavior.
+   Mobile changes: `cd mobile && npx tsc --noEmit && npx expo export --platform ios`
+   (bundles) and `npx expo prebuild --platform ios --no-install` (config plugins);
+   a real run needs the Mac steps in docs/MOBILE.md — say so in your report.
 3. Runtime smoke test:
    ```bash
    npm run dev

@@ -37,7 +37,8 @@ export async function fetchDayTimings(
   url.searchParams.set('school', String(req.school));
   url.searchParams.set('iso8601', 'true');
 
-  const res = await fetchImpl(url, { signal: AbortSignal.timeout(10_000) });
+  const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(10_000) : undefined;
+  const res = await fetchImpl(url, signal ? { signal } : undefined);
   if (!res.ok) throw new Error(`Aladhan API error: HTTP ${res.status}`);
   const body = (await res.json()) as {
     code: number;
@@ -62,12 +63,4 @@ export async function fetchDayTimings(
   };
 }
 
-/** YYYY-MM-DD wall date for an instant in an IANA timezone (DST-safe). */
-export function localDateString(instant: Date, tz: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(instant);
-}
+export { localDateString } from '../util/tz.js';

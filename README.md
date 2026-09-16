@@ -1,9 +1,11 @@
 # Fitbit Air Tracker — Prayer-Aware Smart Wake
 
-A web app that connects to the **Google Fitbit Air** tracker, follows the wearer's
-sleep as closely as the platform allows, and wakes them for prayer **at the moment
-they can wake most easily** — during light sleep, inside a configurable window
-before the prayer time (primarily Fajr). Prayer times are fetched daily from the
+An **iPhone app** (plus a web client) that connects to the **Google Fitbit Air**
+tracker, follows the wearer's sleep as closely as the platform allows, and wakes
+them for prayer **at the moment they can wake most easily** — during light sleep,
+inside a configurable window before the prayer time (primarily Fajr) — with
+system alarms that **ring until you stop them** (iOS 26 AlarmKit), custom wake
+times, and a backup chain of alarms. Prayer times are fetched daily from the
 free [Aladhan API](https://aladhan.com/prayer-times-api) based on the user's
 location. All ingested health data is stored in a normalized, documented form so
 AI agents can consume it later (REST API + MCP server).
@@ -32,17 +34,25 @@ docs/SPEC.md           Product spec: features, user flows, alarm policies
 docs/ARCHITECTURE.md   System design, data model, sequence diagrams
 docs/INTEGRATIONS.md   Google Health API, Aladhan, Web Push — auth, limits, deadlines
 docs/ROADMAP.md        Ordered next tasks with acceptance criteria — start here to contribute
-server/                Fastify + TypeScript backend (wake engine, providers, REST, MCP stub)
+docs/MOBILE.md         iPhone app: install with a free Apple ID, alarm tiers, files
+packages/core/         Shared engine: wake decision, scheduler, alarm planner, mock Fitbit Air, Aladhan client
+mobile/                Expo (React Native) iPhone app — standalone, AlarmKit alarms, Bedside smart wake
+server/                Fastify + TypeScript backend (REST, DB, MCP stub) — optional; for web + AI agents
 web/                   React + Vite PWA (dashboard, settings, bedside mode alarm)
 ```
 
 ## Quickstart
 
 ```bash
-npm install          # installs both workspaces
-npm run dev          # starts server (http://localhost:3001) + web (http://localhost:5173)
-npm test             # unit tests, incl. accelerated wake-engine simulation
-npm run build        # typecheck + production builds for both workspaces
+npm install          # installs all workspaces
+npm test             # engine unit tests, incl. accelerated full-night simulations
+npm run build        # builds core + server + web, type-checks the iPhone app
+
+# iPhone (needs a Mac with Xcode 26 — see docs/MOBILE.md)
+npm run build -w packages/core && cd mobile && npx expo prebuild --platform ios && npx expo run:ios --device
+
+# Web client + server (optional)
+npm run dev          # server http://localhost:3001 + web http://localhost:5173
 ```
 
 The app runs out of the box in **mock mode**: a simulated Fitbit Air generates a
@@ -52,7 +62,8 @@ you're ready to connect a real device (see `docs/INTEGRATIONS.md`).
 
 ## Status / roadmap
 
-- [x] Phase 0 — Spec + scaffold (this)
+- [x] Phase 0 — Spec + scaffold
+- [x] Phase M1 — Standalone iPhone app: AlarmKit alarms, custom wake times, Bedside smart wake, backup chain (mock sleep data)
 - [ ] Phase 1 — Harden alarms & complete the MVP UX
 - [ ] Phase 2 — Google Health API OAuth + real sleep ingestion
 - [ ] Phase 3 — Smarter waking: autotuning, back-to-sleep, bedtime advisor, Ramadan mode

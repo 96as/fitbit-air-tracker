@@ -24,7 +24,13 @@ flowchart LR
   end
 ```
 
-Two deployable pieces, one repo (npm workspaces):
+**Update (Phase M):** the primary product is now the standalone iPhone app in
+`mobile/`; the engine below was extracted into `packages/core` and is shared by
+server, web and mobile unchanged. See `docs/MOBILE.md` for the phone-side alarm
+tiers (AlarmKit / Bedside / notification chain). The server remains the web
+client's backend and the future AI-agent surface.
+
+Deployable pieces, one repo (npm workspaces):
 
 - **`server/`** — Fastify HTTP API, data ingestion, wake engine, push sender,
   MCP stub. State in SQLite (dev) with a thin data-access layer that ports to

@@ -1,0 +1,46 @@
+{
+  "name": "@fitbit-air-tracker/mobile",
+  "version": "0.1.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@fitbit-air-tracker/core": "*",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "^9.1.0",
+    "expo": "~57.0.23",
+    "expo-audio": "~57.0.5",
+    "expo-background-task": "~57.0.18",
+    "expo-build-properties": "~57.0.18",
+    "expo-constants": "~57.0.18",
+    "expo-dev-client": "~57.0.19",
+    "expo-haptics": "~57.0.3",
+    "expo-keep-awake": "~57.0.2",
+    "expo-linking": "~57.0.10",
+    "expo-location": "~57.0.18",
+    "expo-notifications": "~57.0.19",
+    "expo-router": "~57.0.21",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "expo-task-manager": "~57.0.18",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-nitro-ios-alarm-kit": "^1.0.41",
+    "react-native-nitro-modules": "^0.37.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios --device",
+    "prebuild": "expo prebuild --platform ios",
+    "typecheck": "tsc --noEmit",
+    "export": "expo export --platform ios --output-dir /tmp/expo-export",
+    "doctor": "expo-doctor"
+  },
+  "private": true
+}

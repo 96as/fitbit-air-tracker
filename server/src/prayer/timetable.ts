@@ -1,6 +1,13 @@
 import type { Db } from '../db/index.js';
-import type { User } from '../types.js';
-import { fetchDayTimings, localDateString, type DayTimings } from './aladhan.js';
+import {
+  fetchDayTimings,
+  localDateString,
+  timingKeyForPrayer,
+  type DayTimings,
+  type User,
+} from '@fitbit-air-tracker/core';
+
+export { timingKeyForPrayer };
 
 /**
  * Cached prayer timetable: one Aladhan fetch per (user, local date, method),
@@ -54,17 +61,5 @@ export class TimetableService {
       if (iso && new Date(iso) >= now) return new Date(iso);
     }
     return undefined;
-  }
-}
-
-/** Map an alarm policy's prayer to the Aladhan timing key that anchors it. */
-export function timingKeyForPrayer(prayer: string): string {
-  switch (prayer) {
-    case 'qiyam':
-      return 'lastthird';
-    case 'suhoor':
-      return 'fajr'; // suhoor deadline is Fajr; the policy's offset carves out eating time
-    default:
-      return prayer;
   }
 }

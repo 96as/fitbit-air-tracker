@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { newId } from '../../util/id.js';
 import type { Clock, SleepSample, SleepSession, SleepStage, SleepStageSegment } from '../../types.js';
 import type { DateRange, SleepDataProvider } from '../types.js';
 
@@ -124,7 +124,7 @@ export function samplesToSession(
   const stages = samplesToSegments(samples);
   const asleepMin = samples.filter((s) => s.stage !== 'awake').length;
   return {
-    id: randomUUID(),
+    id: newId(),
     userId,
     startUtc: samples[0]!.tsUtc,
     endUtc: new Date(new Date(samples[samples.length - 1]!.tsUtc).getTime() + MINUTE_MS).toISOString(),

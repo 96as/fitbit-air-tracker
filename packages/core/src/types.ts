@@ -86,3 +86,18 @@ export interface Clock {
 }
 
 export const systemClock: Clock = { now: () => new Date() };
+
+/**
+ * A wake alarm as configured by the user. `prayer` alarms anchor to a prayer
+ * timing (deadline = prayer time − deadlineOffsetMinutes); `custom` alarms
+ * anchor to a wall-clock time in the user's timezone (deadline = customTime).
+ * Both get the same smart-wake window before the deadline (0 = exact alarm).
+ */
+export interface WakeAlarm extends AlarmPolicy {
+  kind: 'prayer' | 'custom';
+  label?: string;
+  /** HH:MM local wall time — required when kind === 'custom'. */
+  customTime?: string;
+  /** Weekdays (0 = Sunday … 6 = Saturday). Undefined/empty = every day. */
+  days?: number[];
+}

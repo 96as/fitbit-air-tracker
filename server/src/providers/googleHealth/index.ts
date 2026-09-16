@@ -1,5 +1,4 @@
-import type { SleepSample, SleepSession } from '../../types.js';
-import type { DateRange, SleepDataProvider } from '../types.js';
+import type { DateRange, SleepDataProvider, SleepSample, SleepSession } from '@fitbit-air-tracker/core';
 
 /**
  * Phase 2 stub — Google Health API provider for the Fitbit Air.
