@@ -58,6 +58,24 @@ export interface AlarmEvent {
   tsUtc: string;
 }
 
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  active: boolean;
+  redirectUri: string;
+}
+
+export interface ProbeReport {
+  checkedAtUtc: string;
+  sessionsLast48h: number;
+  newestSessionEndUtc?: string;
+  newestStageEndUtc?: string;
+  newestHeartRateUtc?: string;
+  anyUnprocessedSession: boolean;
+  stageLagMin?: number;
+  heartRateLagMin?: number;
+}
+
 export interface Status {
   provider: string;
   mockMode: boolean;
@@ -110,6 +128,10 @@ export const api = {
       body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys }),
     }),
   fireTest: () => request<{ ok: boolean }>('/api/v1/demo/fire-test', { method: 'POST' }),
+  googleStatus: () => request<GoogleStatus>('/api/v1/auth/google/status'),
+  googleDisconnect: () => request<{ ok: boolean }>('/api/v1/auth/google', { method: 'DELETE' }),
+  googleProbe: () => request<ProbeReport>('/api/v1/google/probe'),
+  googleSync: () => request<{ saved: number }>('/api/v1/google/sync', { method: 'POST' }),
 };
 
 export function fmtTime(iso: string): string {

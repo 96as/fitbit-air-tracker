@@ -29,16 +29,24 @@ and "I'm awake" stops sound+haptics; Settings ▸ Use my location updates prayer
 times. Record anything broken as tasks here.
 **Accept:** all four behaviors confirmed on device; screenshots in the PR.
 
-### [ ] M2 Real Fitbit Air data on the phone (Google Health API, on-device OAuth)
-**Gate: user confirms Google Health API developer access.** Implement
-`mobile/src/services/googleHealthProvider.ts` behind `SleepDataProvider`:
-OAuth 2.0 with PKCE via `expo-auth-session` (no client secret on device),
-tokens in `expo-secure-store`, `getLatestSamples` polling the intraday
-sleep-stage + heart-rate endpoints (≥ 60 s apart) while Bedside mode is armed;
-`getSessions` for history into `store.sessions`. Provider choice in Settings.
-Field mapping notes: `server/src/providers/googleHealth/index.ts` + docs/INTEGRATIONS.md §1.
-**Accept:** recorded-fixture unit test for the mapping (fixtures committed);
-a real night visible in Tonight; Bedside fires from real stages.
+### [x] M2 Real Fitbit Air data (Google Health API) — code complete, credentials pending
+Implemented in `packages/core/src/providers/googleHealth/` (client, OAuth,
+mapping, provider, fixtures + tests), `mobile/src/services/googleAuth.ts`
+(PKCE sign-in, SecureStore), Settings ▸ Sleep data (client ID, connect, source
+switch, probe), and server routes `/api/v1/auth/google/*` + `google:probe`
+script. **No Google approval is required for personal use** (earlier gate was
+wrong). Remaining: the user creates the Cloud Console OAuth clients and signs
+in — `docs/GOOGLE_HEALTH_API.md` §1–2.
+
+### [ ] M2.1 Day-one experiment: is tonight's sleep visible mid-night?
+Run the probe per `docs/GOOGLE_HEALTH_API.md` §5 during a real night and record
+the outcome here (stages live / HR only / post-hoc only). Then: if stages are
+live, nothing to change; if HR only, tune `hrRiseThresholdBpm` in `decide()`
+against real nights; if post-hoc only, add the "set your Fitbit Smart Wake
+alarm to HH:MM" helper on Tonight (band alarm time = latest-wake time) and
+make Bedside optional.
+**Accept:** probe results from ≥ 2 nights logged (`google.probe` events) and
+the decision written into this task.
 
 ### [ ] M3 Back-to-sleep detection + wake-ease feedback on the phone
 After "I'm awake", keep the provider polling for 30 min (Bedside stays armed);

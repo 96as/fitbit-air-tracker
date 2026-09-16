@@ -1,38 +1,68 @@
-import type { DateRange, SleepDataProvider, SleepSample, SleepSession } from '@fitbit-air-tracker/core';
+import {
+  GoogleHealthClient,
+  GoogleHealthProvider,
+  TokenManager,
+  systemClock,
+  type Clock,
+  type TokenSet,
+  type TokenStore,
+} from '@fitbit-air-tracker/core';
+import type { Db } from '../../db/index.js';
 
 /**
- * Phase 2 stub — Google Health API provider for the Fitbit Air.
- *
- * Implementation notes (see docs/INTEGRATIONS.md §1):
- * - OAuth 2.0 auth-code flow; tokens live in the oauth_tokens table.
- * - subscribe(): register the webhook endpoint; the receiver in
- *   src/api/routes.ts already ACKs within the required 5 s and triggers an
- *   engine tick — this provider only needs to do the registration call.
- * - getLatestSamples(): fetch the intraday sleep-stage + heart-rate series
- *   since `since` and map to SleepSample (stage names normalize to
- *   awake|light|deep|rem; timestamps to ISO-8601 UTC).
- * - getSessions(): map sleep-session resources to SleepSession, preserving
- *   the provider's session ids in raw_ref for traceability.
- * - Expect data to trail wall time by ~15 min (device sync cadence) — the
- *   wake engine already tolerates this; do not busy-poll faster than 60 s.
+ * Server-side Google Health provider: the shared core client + token logic,
+ * with tokens persisted in the oauth_tokens table. Sign-in happens through the
+ * /api/v1/auth/google/* routes (Web-application OAuth client with a secret).
  */
-export class GoogleHealthProvider implements SleepDataProvider {
-  readonly name = 'google_health' as const;
 
-  constructor(_opts: { clientId?: string; clientSecret?: string }) {}
+export const GOOGLE_PROVIDER_KEY = 'google_health';
 
-  async getLatestSamples(_userId: string, _since: Date): Promise<SleepSample[]> {
-    throw new Error(
-      'Google Health API provider is not implemented yet (Phase 2). ' +
-        'Set PROVIDER=mock, or see docs/INTEGRATIONS.md to request API access.',
-    );
+export class DbTokenStore implements TokenStore {
+  constructor(
+    private readonly db: Db,
+    private readonly userId: string,
+  ) {}
+  async load(): Promise<TokenSet | undefined> {
+    return this.db.getOAuthToken(this.userId, GOOGLE_PROVIDER_KEY);
   }
-
-  async getSessions(_userId: string, _range: DateRange): Promise<SleepSession[]> {
-    throw new Error('Google Health API provider is not implemented yet (Phase 2).');
+  async save(tokens: TokenSet): Promise<void> {
+    this.db.saveOAuthToken(this.userId, GOOGLE_PROVIDER_KEY, tokens);
   }
-
-  async subscribe(_userId: string): Promise<void> {
-    throw new Error('Google Health API provider is not implemented yet (Phase 2).');
+  async clear(): Promise<void> {
+    this.db.deleteOAuthToken(this.userId, GOOGLE_PROVIDER_KEY);
   }
+}
+
+export interface ServerGoogleHealth {
+  provider: GoogleHealthProvider;
+  tokenManager: TokenManager;
+  store: DbTokenStore;
+  configured: boolean;
+}
+
+export function createServerGoogleHealth(opts: {
+  db: Db;
+  userId: string;
+  clientId?: string;
+  clientSecret?: string;
+  clock?: Clock;
+}): ServerGoogleHealth {
+  const clock = opts.clock ?? systemClock;
+  const store = new DbTokenStore(opts.db, opts.userId);
+  const tokenManager = new TokenManager({
+    store,
+    clientId: opts.clientId ?? '',
+    clientSecret: opts.clientSecret,
+    clock,
+  });
+  const client = new GoogleHealthClient({
+    getAccessToken: tokenManager.getAccessToken,
+    onUnauthorized: () => tokenManager.forceRefresh(),
+  });
+  return {
+    provider: new GoogleHealthProvider({ client, clock }),
+    tokenManager,
+    store,
+    configured: Boolean(opts.clientId && opts.clientSecret),
+  };
 }

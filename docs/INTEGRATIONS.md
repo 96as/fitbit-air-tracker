@@ -16,20 +16,15 @@ Key facts that shape our design:
 |------|-------------------------|
 | Device→cloud sync is periodic: automatic throughout the day, ~15 min cadence when the phone app runs in background with Bluetooth | No stage streaming. Wake engine works on a window + freshest-data model with a hard-deadline fallback |
 | Webhook subscriptions notify "data changed" only — you must fetch afterwards; endpoint must respond < 5 s | Webhook receiver just enqueues + 200s immediately; fetch happens async and triggers an engine tick |
-| Intraday-grade access is approved case-by-case; developer registration required | `SleepDataProvider` interface + mock provider; the app is fully developable/demo-able before approval |
+| Personal use needs **no approval**: enable the API in your own Cloud project, consent screen in Testing mode, add yourself as a test user (Restricted-scope review only applies to publishing) | Implemented end-to-end; see `docs/GOOGLE_HEALTH_API.md` for the 10-minute setup |
 | OAuth 2.0 user consent, sleep/heart-rate scopes | Standard auth-code flow in `server/src/api/` (Phase 2); tokens in `oauth_tokens` with refresh |
 | Google Health also feeds Health Connect (Android) / HealthKit (iOS) | On-device access is a *native-app* option, not available to a website; kept as the documented future companion-app path |
 
-**Setup when ready (Phase 2):**
-1. Register the app in the Google Health developer console; request the sleep +
-   heart-rate scopes (and intraday if offered).
-2. Configure OAuth redirect `https://<host>/api/v1/auth/google/callback` and
-   webhook endpoint `https://<host>/api/v1/webhooks/google-health` (public HTTPS,
-   responds < 5 s).
-3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `PROVIDER=google_health` in
-   `server/.env`.
-4. Implement `providers/googleHealth/` against the same `SleepDataProvider`
-   interface the mock already satisfies (field mapping notes in the stub).
+**Setup (code is complete — only credentials are needed):** follow
+`docs/GOOGLE_HEALTH_API.md` §1–2. Summary: Cloud project → enable Google Health
+API → consent screen (Testing, your Gmail as test user) → iOS client for the
+phone, Web client for the server → paste IDs → sign in. Webhooks
+(`projects/{p}/subscribers`) are optional and not needed for personal use.
 
 References: https://developers.google.com/health · release notes:
 https://developers.google.com/health/release-notes · data types:

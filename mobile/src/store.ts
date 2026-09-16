@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { newId, type PlannedAlarm, type SleepSession, type TimingsByDate, type WakeAlarm } from '@fitbit-air-tracker/core';
+import { newId, type PlannedAlarm, type ProbeReport, type SleepSession, type TimingsByDate, type WakeAlarm } from '@fitbit-air-tracker/core';
 
 /**
  * On-device state. Everything the server's tables held lives here as JSON
@@ -18,6 +18,10 @@ export interface Settings {
   madhab: 0 | 1;
   /** Also schedule the backup notification chain after each deadline. */
   chainBackup: boolean;
+  /** Where sleep data comes from: the simulator or the real Fitbit Air via Google Health. */
+  sleepSource: 'mock' | 'google';
+  /** iOS OAuth client ID (not a secret). Prefilled from EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID. */
+  googleIosClientId: string;
 }
 
 export interface AppEvent {
@@ -58,6 +62,9 @@ export interface AppState {
   sessions: SleepSession[];
   permissions: { alarmKit: PermissionState; notifications: PermissionState };
   activeRing?: ActiveRing;
+  /** Mirror of "tokens exist in SecureStore" for the UI (tokens themselves never live here). */
+  googleConnected: boolean;
+  googleLastProbe?: ProbeReport;
 
   setSettings(patch: Partial<Settings>): void;
   upsertAlarm(alarm: WakeAlarm): void;
@@ -69,6 +76,8 @@ export interface AppState {
   setSessions(sessions: SleepSession[]): void;
   setPermission(key: keyof AppState['permissions'], value: PermissionState): void;
   setActiveRing(ring?: ActiveRing): void;
+  setGoogleConnected(connected: boolean): void;
+  setGoogleLastProbe(report?: ProbeReport): void;
 }
 
 const deviceTz = (() => {
@@ -87,6 +96,8 @@ export const DEFAULT_SETTINGS: Settings = {
   calcMethod: 4,
   madhab: 0,
   chainBackup: true,
+  sleepSource: 'mock',
+  googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
 };
 
 export function defaultAlarms(): WakeAlarm[] {
@@ -123,6 +134,8 @@ export const useStore = create<AppState>()(
       sessions: [],
       permissions: { alarmKit: 'unknown', notifications: 'unknown' },
       activeRing: undefined,
+      googleConnected: false,
+      googleLastProbe: undefined,
 
       setSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       upsertAlarm: (alarm) =>
@@ -156,6 +169,8 @@ export const useStore = create<AppState>()(
       setSessions: (sessions) => set({ sessions }),
       setPermission: (key, value) => set((s) => ({ permissions: { ...s.permissions, [key]: value } })),
       setActiveRing: (ring) => set({ activeRing: ring }),
+      setGoogleConnected: (googleConnected) => set({ googleConnected }),
+      setGoogleLastProbe: (googleLastProbe) => set({ googleLastProbe }),
     }),
     {
       name: 'smartwake-v1',
@@ -171,6 +186,8 @@ export const useStore = create<AppState>()(
         events: s.events,
         sessions: s.sessions,
         permissions: s.permissions,
+        googleConnected: s.googleConnected,
+        googleLastProbe: s.googleLastProbe,
       }),
       onRehydrateStorage: () => () => {
         useStore.setState({ hydrated: true });

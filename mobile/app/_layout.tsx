@@ -7,7 +7,8 @@ import { useStore } from '../src/store';
 import { configureNotificationHandling, ensureNotificationPermission } from '../src/services/notificationChain';
 import { refreshTimetable } from '../src/services/prayerTimes';
 import { replan } from '../src/services/replan';
-import { seedSleepHistory } from '../src/services/sleep';
+import { seedSleepHistory, syncGoogleHistory } from '../src/services/sleep';
+import { isGoogleConnected } from '../src/services/googleAuth';
 import { registerBackgroundRefresh } from '../src/services/background';
 import { alarmKit } from '../src/services/alarmKit';
 import { colors } from '../src/theme';
@@ -27,6 +28,8 @@ async function bootstrap(): Promise<void> {
   }
   await replan();
   await registerBackgroundRefresh();
+  s.setGoogleConnected(await isGoogleConnected());
+  await syncGoogleHistory().catch((err) => s.logEvent('google.sync-failed', { error: String(err) }));
 }
 
 export default function RootLayout() {
@@ -38,7 +41,10 @@ export default function RootLayout() {
     void bootstrap();
     // Foreground: keep the timetable horizon full + re-arm (cheap, idempotent).
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshTimetable().then(() => replan()).catch(() => undefined);
+      if (state === 'active') {
+        void refreshTimetable().then(() => replan()).catch(() => undefined);
+        void syncGoogleHistory().catch(() => undefined);
+      }
     });
     return () => sub.remove();
   }, [hydrated]);

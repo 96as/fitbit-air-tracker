@@ -1,4 +1,4 @@
-import type { AlarmPolicy, Clock, Decision } from '../types.js';
+import type { AlarmPolicy, Clock, Decision, SleepSample } from '../types.js';
 import type { SleepDataProvider } from '../providers/types.js';
 import { decide } from './decide.js';
 
@@ -16,6 +16,8 @@ export interface WakeSchedulerOptions {
   clock: Clock;
   provider: SleepDataProvider;
   onFire: (alarm: ScheduledAlarm, decision: FireDecision) => void | Promise<void>;
+  /** Provider failures are reported here and never stop the deadline rule. */
+  onError?: (error: unknown, alarm: ScheduledAlarm) => void;
   stalenessLimitMin?: number;
 }
 
@@ -72,7 +74,14 @@ export class WakeScheduler {
       for (const alarm of this.alarms) {
         if (alarm.fired || now < alarm.windowStartUtc) continue;
         const lookback = new Date(alarm.windowStartUtc.getTime() - 30 * MINUTE_MS);
-        const samples = await this.opts.provider.getLatestSamples(alarm.policy.userId, lookback);
+        let samples: SleepSample[] = [];
+        try {
+          samples = await this.opts.provider.getLatestSamples(alarm.policy.userId, lookback);
+        } catch (err) {
+          // Invariant 1: a dead/unauthenticated provider degrades to "no data" —
+          // the deadline still fires.
+          this.opts.onError?.(err, alarm);
+        }
         const decision = decide({
           now,
           deadline: alarm.deadlineUtc,

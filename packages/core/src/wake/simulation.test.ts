@@ -108,4 +108,36 @@ describe('wake engine — accelerated night simulation', () => {
     expect(result!.firedAt.getTime()).toBeGreaterThanOrEqual(deadline.getTime());
     expect(result!.firedAt.getTime()).toBeLessThanOrEqual(deadline.getTime() + 60_000);
   });
+
+  it('still fires at the deadline when the provider throws (dead/unauthenticated provider)', async () => {
+    const sleepStart = new Date('2026-07-03T22:00:00Z');
+    const clock = new FakeClock(sleepStart);
+    const errors: unknown[] = [];
+    const deadProvider: SleepDataProvider = {
+      name: 'google_health',
+      async getLatestSamples() {
+        throw new Error('not connected to Google');
+      },
+      async getSessions() {
+        return [];
+      },
+    };
+    const fajr = new Date('2026-07-04T04:30:00Z');
+    let result: { decision: FireDecision; firedAt: Date } | undefined;
+    const scheduler = new WakeScheduler({
+      clock,
+      provider: deadProvider,
+      onFire: (_a, decision) => {
+        result = { decision, firedAt: clock.now() };
+      },
+      onError: (e) => errors.push(e),
+    });
+    scheduler.schedule(policy, fajr);
+    for (let i = 0; i < 10 * 60 && !result; i++) {
+      await scheduler.tick();
+      clock.advanceMinutes(1);
+    }
+    expect(result!.decision.reason).toBe('deadline');
+    expect(errors.length).toBeGreaterThan(0);
+  });
 });

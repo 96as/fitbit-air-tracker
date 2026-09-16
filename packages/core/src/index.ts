@@ -3,6 +3,7 @@ export * from './wake/decide.js';
 export * from './wake/scheduler.js';
 export * from './providers/types.js';
 export * from './providers/mock/index.js';
+export * from './providers/googleHealth/index.js';
 export * from './prayer/aladhan.js';
 export * from './prayer/next.js';
 export * from './alarms/plan.js';

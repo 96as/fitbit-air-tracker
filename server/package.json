@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json && mkdir -p dist/db && cp src/db/schema.sql dist/db/",
     "start": "node dist/index.js",
-    "vapid": "web-push generate-vapid-keys"
+    "vapid": "web-push generate-vapid-keys",
+    "google:probe": "tsx scripts/google-probe.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",

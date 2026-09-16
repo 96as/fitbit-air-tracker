@@ -8,10 +8,13 @@ import { clearAndRefetch } from '../../src/services/prayerTimes';
 import { replan, labelFor } from '../../src/services/replan';
 import { alarmKit } from '../../src/services/alarmKit';
 import { ensureNotificationPermission } from '../../src/services/notificationChain';
-import { seedSleepHistory } from '../../src/services/sleep';
+import { seedSleepHistory, syncGoogleHistory } from '../../src/services/sleep';
+import { DEFAULT_IOS_CLIENT_ID, makeGoogleProvider, redirectUriFor, signInWithGoogle, signOutOfGoogle } from '../../src/services/googleAuth';
 
 export default function SettingsScreen() {
-  const { settings, setSettings, permissions, setPermission, planned, events, device } = useStore();
+  const { settings, setSettings, permissions, setPermission, planned, events, device, googleConnected, setGoogleConnected, googleLastProbe, setGoogleLastProbe, logEvent } = useStore();
+  const [clientId, setClientId] = useState(settings.googleIosClientId || DEFAULT_IOS_CLIENT_ID);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [lat, setLat] = useState(String(settings.lat));
   const [lng, setLng] = useState(String(settings.lng));
   const [tz, setTz] = useState(settings.tz);
@@ -97,6 +100,83 @@ export default function SettingsScreen() {
           Armed now: {device.alarmKitIds.length} system alarm(s), {device.notificationIds.length} backup notification(s).
           {planned[0] ? ` Next: ${labelFor(planned[0])} ${fmtTime(planned[0].deadlineUtc, settings.tz)}.` : ''}
         </Muted>
+      </Card>
+
+      <H2>Sleep data</H2>
+      <Card>
+        <View style={{ flexDirection: 'row' }}>
+          <Chip label="Simulator" active={settings.sleepSource === 'mock'} onPress={() => setSettings({ sleepSource: 'mock' })} />
+          <Chip
+            label="Google Health (Fitbit Air)"
+            active={settings.sleepSource === 'google'}
+            onPress={() => setSettings({ sleepSource: 'google' })}
+          />
+        </View>
+        {settings.sleepSource === 'google' && !googleConnected && (
+          <Text style={{ color: colors.accent, marginTop: 6 }}>Not connected yet — the simulator is used until you sign in.</Text>
+        )}
+        <Field label="Google iOS OAuth client ID" value={clientId} onChangeText={setClientId} autoCapitalize="none" autoCorrect={false} placeholder="1234567890-abc.apps.googleusercontent.com" />
+        <Muted>
+          Create it in Google Cloud Console (docs/GOOGLE_HEALTH_API.md §1). Put it in mobile/.env as
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID and rebuild once so the app owns the redirect scheme
+          {clientId.trim() ? ` (${redirectUriFor(clientId)})` : ''}.
+        </Muted>
+        {googleConnected ? (
+          <>
+            <Text style={{ color: colors.ok, marginTop: 8 }}>✓ Google account connected</Text>
+            <Button
+              title={googleBusy ? 'Checking…' : 'Test Google sleep fetch now'}
+              kind="secondary"
+              disabled={googleBusy}
+              onPress={() => {
+                setGoogleBusy(true);
+                makeGoogleProvider(settings.googleIosClientId)
+                  .probe('me')
+                  .then((r) => {
+                    setGoogleLastProbe(r);
+                    logEvent('google.probe', { ...r });
+                  })
+                  .catch((err) => setMsg(`Probe failed: ${String(err)}`))
+                  .finally(() => setGoogleBusy(false));
+              }}
+            />
+            {googleLastProbe && (
+              <View style={{ marginTop: 8 }}>
+                <Muted>Checked {fmtTime(googleLastProbe.checkedAtUtc, settings.tz)} · sessions in last 48 h: {googleLastProbe.sessionsLast48h}</Muted>
+                <Muted>Newest stage: {googleLastProbe.newestStageEndUtc ? `${fmtTime(googleLastProbe.newestStageEndUtc, settings.tz)} (${googleLastProbe.stageLagMin} min ago)` : '—'}</Muted>
+                <Muted>Newest heart rate: {googleLastProbe.newestHeartRateUtc ? `${fmtTime(googleLastProbe.newestHeartRateUtc, settings.tz)} (${googleLastProbe.heartRateLagMin} min ago)` : '—'}</Muted>
+                <Text style={{ color: googleLastProbe.anyUnprocessedSession ? colors.ok : colors.muted, marginTop: 4 }}>
+                  {googleLastProbe.anyUnprocessedSession ? 'In-progress night visible → live smart wake possible' : 'No in-progress night visible right now'}
+                </Text>
+              </View>
+            )}
+            <Button title="Sync sleep history" kind="secondary" onPress={() => void syncGoogleHistory().then((n) => setMsg(`Synced ${n} nights from Google.`)).catch((e) => setMsg(String(e)))} />
+            <Button
+              title="Disconnect Google"
+              kind="danger"
+              onPress={() => void signOutOfGoogle().then(() => { setGoogleConnected(false); logEvent('google.disconnected'); })}
+            />
+          </>
+        ) : (
+          <Button
+            title={googleBusy ? 'Signing in…' : 'Connect Google'}
+            disabled={googleBusy || !clientId.trim()}
+            onPress={() => {
+              setGoogleBusy(true);
+              setSettings({ googleIosClientId: clientId.trim() });
+              signInWithGoogle(clientId)
+                .then(() => {
+                  setGoogleConnected(true);
+                  setSettings({ sleepSource: 'google' });
+                  logEvent('google.connected');
+                  setMsg('Connected. Sleep source switched to Google Health.');
+                  return syncGoogleHistory();
+                })
+                .catch((err) => setMsg(`Google sign-in failed: ${String(err)}`))
+                .finally(() => setGoogleBusy(false));
+            }}
+          />
+        )}
       </Card>
 
       <H2>Data</H2>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, fmtTime, type Status } from '../api';
+import { api, fmtTime, type GoogleStatus, type ProbeReport, type Status } from '../api';
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -12,12 +12,21 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 
 export default function Connect() {
   const [status, setStatus] = useState<Status>();
+  const [google, setGoogle] = useState<GoogleStatus>();
+  const [probe, setProbe] = useState<ProbeReport>();
+  const [googleMsg, setGoogleMsg] = useState<string>(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('google') === 'connected') return 'Google account connected ✓';
+    if (q.get('google') === 'error') return `Google sign-in failed: ${q.get('reason') ?? 'unknown'}`;
+    return '';
+  });
   const [pushState, setPushState] = useState<'unknown' | 'subscribed' | 'unavailable' | 'error'>(
     'unknown',
   );
 
   useEffect(() => {
     api.status().then(setStatus).catch(() => undefined);
+    api.googleStatus().then(setGoogle).catch(() => undefined);
     navigator.serviceWorker?.ready.then(async (reg) => {
       const sub = await reg.pushManager.getSubscription();
       if (sub) setPushState('subscribed');
@@ -47,25 +56,54 @@ export default function Connect() {
       <h1>Device & delivery</h1>
 
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>Fitbit Air connection</h2>
-        {status?.mockMode ? (
-          <>
-            <p>
-              <span className="warn">● Simulator mode</span> — a mock Fitbit Air is generating
-              realistic sleep data (including the real ~15 min sync lag), so everything works
-              without Google credentials.
-            </p>
-            <p className="notice">
-              Connecting a real Fitbit Air uses the Google Health API and requires approved
-              developer access — see <code>docs/INTEGRATIONS.md</code>. Once configured, set{' '}
-              <code>PROVIDER=google_health</code> in <code>server/.env</code>.
-            </p>
-          </>
-        ) : (
+        <h2 style={{ marginTop: 0 }}>Fitbit Air connection (Google Health API)</h2>
+        {status?.mockMode && (
           <p>
-            <span className="ok">● Google Health API</span> provider active.
+            <span className="warn">● Simulator mode</span> — a mock Fitbit Air is generating realistic sleep
+            data (including the real ~15 min sync lag). Set <code>PROVIDER=google_health</code> in{' '}
+            <code>server/.env</code> to use your real data once connected.
           </p>
         )}
+        {!google ? null : !google.configured ? (
+          <p className="notice">
+            Not configured yet: create a Web OAuth client in Google Cloud Console with redirect URI{' '}
+            <code>{google.redirectUri}</code>, put its ID/secret in <code>server/.env</code>, restart. Steps in{' '}
+            <code>docs/GOOGLE_HEALTH_API.md</code>.
+          </p>
+        ) : google.connected ? (
+          <>
+            <p className="ok">✓ Google account connected{google.active ? ' — live provider' : ' (simulator still active)'}.</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="secondary" onClick={() => api.googleProbe().then(setProbe).catch((e) => setGoogleMsg(String(e)))}>
+                Probe data freshness
+              </button>
+              <button className="secondary" onClick={() => api.googleSync().then((r) => setGoogleMsg(`Synced ${r.saved} sleep sessions.`)).catch((e) => setGoogleMsg(String(e)))}>
+                Sync sleep history
+              </button>
+              <button className="danger" onClick={() => api.googleDisconnect().then(() => api.googleStatus().then(setGoogle))}>
+                Disconnect
+              </button>
+            </div>
+            {probe && (
+              <table style={{ marginTop: 10 }}>
+                <tbody>
+                  <tr><th>Sessions (48 h)</th><td>{probe.sessionsLast48h}</td></tr>
+                  <tr><th>Newest stage</th><td>{probe.newestStageEndUtc ? `${fmtTime(probe.newestStageEndUtc)} (${probe.stageLagMin} min ago)` : '—'}</td></tr>
+                  <tr><th>Newest heart rate</th><td>{probe.newestHeartRateUtc ? `${fmtTime(probe.newestHeartRateUtc)} (${probe.heartRateLagMin} min ago)` : '—'}</td></tr>
+                  <tr><th>In-progress session visible</th><td>{probe.anyUnprocessedSession ? 'yes — live smart wake possible' : 'no'}</td></tr>
+                </tbody>
+              </table>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="notice">Sign in with the Google account you use in the Google Health app.</p>
+            <a href="/api/v1/auth/google/start">
+              <button>Connect Google (Fitbit Air)</button>
+            </a>
+          </>
+        )}
+        {googleMsg && <p className="notice" style={{ marginTop: 8 }}>{googleMsg}</p>}
       </div>
 
       <div className="card">

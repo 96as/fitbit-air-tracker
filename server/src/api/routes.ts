@@ -4,13 +4,19 @@ import type { PushService } from '../push/webpush.js';
 import type { TimetableService } from '../prayer/timetable.js';
 import { timingKeyForPrayer } from '../prayer/timetable.js';
 import { mcpTools } from '../mcp/index.js';
+import { createHash, randomBytes } from 'node:crypto';
 import {
+  GoogleAuthError,
+  buildAuthUrl,
+  exchangeCode,
   localDateString,
+  revokeToken,
   type AlarmPolicy,
   type Prayer,
   type SleepStage,
   type WakeScheduler,
 } from '@fitbit-air-tracker/core';
+import type { ServerGoogleHealth } from '../providers/googleHealth/index.js';
 
 export interface ApiContext {
   db: Db;
@@ -21,7 +27,15 @@ export interface ApiContext {
   providerName: string;
   /** Recompute + reschedule tonight's alarms (after settings changes). */
   replan: () => Promise<void>;
+  /** Google Health API sign-in (Web OAuth client) — see docs/GOOGLE_HEALTH_API.md. */
+  google: ServerGoogleHealth & { clientId?: string; clientSecret?: string; redirectUri: string; webOrigin: string };
+  /** Pull recent Google sleep sessions into the DB; resolves to the count saved. */
+  syncGoogleSessions: () => Promise<number>;
 }
+
+const base64url = (b: Buffer) => b.toString('base64url');
+/** PKCE + state for in-flight sign-ins (single-user server; expires after 10 min). */
+const pendingSignIns = new Map<string, { verifier: string; createdAt: number }>();
 
 interface SettingsBody {
   lat?: number;
@@ -175,6 +189,86 @@ export async function registerRoutes(app: FastifyInstance, ctx: ApiContext): Pro
     ctx.db.logEvent('sync.received', ctx.userId, { source: 'webhook' });
     setImmediate(() => void ctx.scheduler.tick());
     reply.code(204);
+  });
+
+  // ---- Google Health API sign-in ----------------------------------------------------------
+
+  app.get('/api/v1/auth/google/status', async () => ({
+    configured: ctx.google.configured,
+    connected: await ctx.google.tokenManager.isConnected(),
+    active: ctx.providerName === 'google_health',
+    redirectUri: ctx.google.redirectUri,
+  }));
+
+  app.get('/api/v1/auth/google/start', async (_req, reply) => {
+    if (!ctx.google.configured) {
+      reply.code(400);
+      return { error: 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set in server/.env (see docs/GOOGLE_HEALTH_API.md)' };
+    }
+    const verifier = base64url(randomBytes(32));
+    const challenge = base64url(createHash('sha256').update(verifier).digest());
+    const state = base64url(randomBytes(16));
+    for (const [k, v] of pendingSignIns) if (Date.now() - v.createdAt > 600_000) pendingSignIns.delete(k);
+    pendingSignIns.set(state, { verifier, createdAt: Date.now() });
+    return reply.redirect(
+      buildAuthUrl({ clientId: ctx.google.clientId!, redirectUri: ctx.google.redirectUri, codeChallenge: challenge, state }),
+      302,
+    );
+  });
+
+  app.get<{ Querystring: { code?: string; state?: string; error?: string } }>(
+    '/api/v1/auth/google/callback',
+    async (req, reply) => {
+      const back = (q: string) => reply.redirect(`${ctx.google.webOrigin}/connect?${q}`, 302);
+      if (req.query.error) return back(`google=error&reason=${encodeURIComponent(req.query.error)}`);
+      const pending = req.query.state ? pendingSignIns.get(req.query.state) : undefined;
+      if (!req.query.code || !pending) return back('google=error&reason=invalid_state');
+      pendingSignIns.delete(req.query.state!);
+      try {
+        const tokens = await exchangeCode({
+          clientId: ctx.google.clientId!,
+          clientSecret: ctx.google.clientSecret,
+          code: req.query.code,
+          codeVerifier: pending.verifier,
+          redirectUri: ctx.google.redirectUri,
+        });
+        await ctx.google.store.save(tokens);
+        ctx.db.logEvent('google.connected', ctx.userId, { scope: tokens.scope });
+        void ctx.syncGoogleSessions().catch(() => undefined);
+        return back('google=connected');
+      } catch (err) {
+        const reason = err instanceof GoogleAuthError ? (err.code ?? err.message) : String(err);
+        ctx.db.logEvent('google.connect-failed', ctx.userId, { reason });
+        return back(`google=error&reason=${encodeURIComponent(reason)}`);
+      }
+    },
+  );
+
+  app.delete('/api/v1/auth/google', async () => {
+    const tokens = await ctx.google.store.load();
+    if (tokens?.refreshToken) await revokeToken(tokens.refreshToken);
+    await ctx.google.store.clear();
+    ctx.db.logEvent('google.disconnected', ctx.userId);
+    return { ok: true };
+  });
+
+  /** Day-one experiment: how fresh is the Fitbit Air data right now? */
+  app.get('/api/v1/google/probe', async (_req, reply) => {
+    if (!(await ctx.google.tokenManager.isConnected())) {
+      reply.code(409);
+      return { error: 'not connected to Google' };
+    }
+    const report = await ctx.google.provider.probe(ctx.userId);
+    ctx.db.logEvent('google.probe', ctx.userId, { ...report });
+    return report;
+  });
+
+  app.post('/api/v1/google/sync', async (_req, reply) => {
+    if (!(await ctx.google.tokenManager.isConnected())) {
+      reply.code(409);
+      return { error: 'not connected to Google' };
+    }
+    return { saved: await ctx.syncGoogleSessions() };
   });
 
   // ---- AI-agent surface -------------------------------------------------------------------

@@ -81,7 +81,14 @@ server, web or mobile app can resolve `@fitbit-air-tracker/core`.
   stream. Hence the wake-window design (poll freshest data, hard-deadline
   fallback). Don't attempt streaming; don't poll providers faster than 60 s.
 - The legacy Fitbit Web API (`api.fitbit.com`) **shuts down Sept 2026**. Only
-  target the **Google Health API** (Phase 2, see docs/INTEGRATIONS.md §1).
+  target the **Google Health API v4** — fully implemented in
+  `packages/core/src/providers/googleHealth/` from the official discovery doc.
+  Facts baked in: sleep is filterable by **end_time only**, sleep pages are
+  **max 25**, int64 fields arrive as **strings**, offsets are protobuf
+  Durations (`"10800s"`), `metadata.processed=false` = in-progress night.
+  **Personal use needs no Google approval** (Testing consent screen + test
+  user). Never poll faster than 60 s (provider cache enforces it).
+  Setup/experiment: docs/GOOGLE_HEALTH_API.md.
 - Aladhan API is called with **`iso8601=true`** so timings arrive with UTC
   offsets — never do manual timezone math on prayer times.
 - Web pages can't ring native alarms on locked phones. Web delivery is tiered:
@@ -133,6 +140,7 @@ packages/core/src/
   alarms/plan.ts    PURE planner: WakeAlarm[] + timings → deadlines/windows/chain for N days
   prayer/aladhan.ts HTTP client (iso8601=true) · prayer/next.ts nextOccurrence + timingKeyForPrayer
   providers/        types.ts (the seam) · mock/ (Fitbit Air simulator)
+  providers/googleHealth/  types · api (client+filters) · oauth (TokenManager) · mapping · provider (+probe) · __fixtures__
   util/tz.ts        Intl-only timezone helpers (wallTimeToUtc, localDateString…)
   **/*.test.ts      decide, simulation (full nights), plan
 mobile/             see docs/MOBILE.md §5 for the file map
@@ -141,7 +149,8 @@ server/src/
   types.ts          shared domain types + Clock
   config.ts, env.ts env/config loading (.env is optional)
   db/               schema.sql + Db class (ALL SQL lives here)
-  providers/googleHealth/  Phase-2 stub (server-side Google Health provider)
+  providers/googleHealth/  DbTokenStore + createServerGoogleHealth (core provider over oauth_tokens)
+  scripts/google-probe.ts  CLI freshness report (npm run google:probe -w server)
   prayer/timetable.ts      DB-cached timetable over the core Aladhan client
   push/webpush.ts   VAPID sender + 60 s escalation until ack
   api/routes.ts     /api/v1 REST + webhook receiver + /demo/fire-test
@@ -182,5 +191,5 @@ web/public/sw.js    service worker: push handler + notification actions
 ## What to build next
 
 Open `docs/ROADMAP.md`. Tasks are ordered, self-contained, and carry acceptance
-criteria — pick the first unchecked one. Do not start Phase-2 Google OAuth work
-unless the user says API access has been granted.
+criteria — pick the first unchecked one. The Google integration is code-complete;
+what's left there (M2.1) is an experiment the user runs with a real band.

@@ -1,0 +1,9 @@
+{
+  "dataPoints": [
+    { "heartRate": { "sampleTime": { "physicalTime": "2026-07-04T23:30:00Z", "utcOffset": "10800s" }, "beatsPerMinute": "54", "metadata": { "sensorLocation": "WRIST" } } },
+    { "heartRate": { "sampleTime": { "physicalTime": "2026-07-04T23:35:00Z", "utcOffset": "10800s" }, "beatsPerMinute": "55" } },
+    { "heartRate": { "sampleTime": { "physicalTime": "2026-07-04T23:40:00Z", "utcOffset": "10800s" }, "beatsPerMinute": "57" } },
+    { "heartRate": { "sampleTime": { "physicalTime": "2026-07-04T23:44:00Z", "utcOffset": "10800s" }, "beatsPerMinute": 58 } }
+  ],
+  "nextPageToken": ""
+}

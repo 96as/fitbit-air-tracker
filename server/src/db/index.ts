@@ -9,6 +9,7 @@ import type {
   PrayerTimetableEntry,
   SleepSession,
   SleepStage,
+  TokenSet,
   User,
 } from '@fitbit-air-tracker/core';
 
@@ -77,6 +78,37 @@ export class Db {
       )
       .run(next.email, next.tz, next.lat, next.lng, next.calcMethod, next.madhab, id);
     return this.getUser(id);
+  }
+
+  // ---- oauth tokens ----------------------------------------------------------
+
+  getOAuthToken(userId: string, provider: string): TokenSet | undefined {
+    const row = this.db
+      .prepare('SELECT * FROM oauth_tokens WHERE user_id = ? AND provider = ?')
+      .get(userId, provider) as Record<string, unknown> | undefined;
+    if (!row) return undefined;
+    return {
+      accessToken: String(row.access_token),
+      refreshToken: row.refresh_token == null ? undefined : String(row.refresh_token),
+      expiresAtUtc: String(row.expires_at),
+    };
+  }
+
+  saveOAuthToken(userId: string, provider: string, tokens: TokenSet): void {
+    this.db
+      .prepare(
+        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, provider) DO UPDATE SET
+           access_token = excluded.access_token,
+           refresh_token = COALESCE(excluded.refresh_token, oauth_tokens.refresh_token),
+           expires_at = excluded.expires_at`,
+      )
+      .run(userId, provider, tokens.accessToken, tokens.refreshToken ?? null, tokens.expiresAtUtc);
+  }
+
+  deleteOAuthToken(userId: string, provider: string): void {
+    this.db.prepare('DELETE FROM oauth_tokens WHERE user_id = ? AND provider = ?').run(userId, provider);
   }
 
   // ---- alarm policies ------------------------------------------------------

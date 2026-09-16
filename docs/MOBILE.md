@@ -67,12 +67,15 @@ every day), and a smart window (0 = exact). Custom alarms get the same three
 tiers as prayer alarms.
 
 ## 4. Sleep data today vs. later
-Today the app uses the shared **mock Fitbit Air simulator** (honest ~15 min sync
-lag, realistic sleep cycles). The Bedside tab's **Demo night (60× speed)**
-shows the full flow in about a minute. Real Fitbit Air data comes from the
-Google Health API via on-device OAuth — see `docs/ROADMAP.md` (Phase M2) and
-`docs/INTEGRATIONS.md`. The provider seam (`SleepDataProvider` in
-`packages/core`) is the only thing that changes.
+By default the app uses the shared **mock Fitbit Air simulator** (honest ~15 min
+sync lag, realistic sleep cycles); the Bedside tab's **Demo night (60× speed)**
+shows the full flow in about a minute.
+
+Real Fitbit Air data is **already wired**: Settings ▸ *Sleep data* ▸ paste the
+iOS OAuth client ID from Google Cloud Console ▸ **Connect Google** ▸ switch the
+source to *Google Health*. Setup steps, the API contract and the day-one
+"is my sleep visible mid-night?" experiment are in `docs/GOOGLE_HEALTH_API.md`.
+Both sources sit behind the same `SleepDataProvider` seam.
 
 ## 5. Files
 ```
@@ -88,7 +91,8 @@ mobile/src/services/
   inAppAlarm.ts               audio loop + haptics + keep-awake
   prayerTimes.ts              Aladhan fetch/cache for today..+7
   replan.ts                   plan (core) → device alarms; confirmAwake()
-  sleep.ts                    mock provider factory + seeded history
+  sleep.ts                    provider factory (mock or Google) + seeded history + Google history sync
+  googleAuth.ts               Google sign-in (PKCE via expo-auth-session), tokens in SecureStore
   background.ts               opportunistic daily refresh task
 mobile/assets/alarm.wav       generated alarm sound (notifications + AlarmKit + in-app)
 ```

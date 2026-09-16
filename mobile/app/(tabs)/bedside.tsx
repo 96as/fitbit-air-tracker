@@ -6,7 +6,7 @@ import { useStore } from '../../src/store';
 import { Button, Card, Muted, Screen } from '../../src/components/ui';
 import { colors, fmtTime } from '../../src/theme';
 import { keepScreenAwake, prepareAudioSession, startRinging, stopRinging } from '../../src/services/inAppAlarm';
-import { makeSleepProvider } from '../../src/services/sleep';
+import { makeSleepProvider, usingRealData } from '../../src/services/sleep';
 import { confirmAwake, labelFor } from '../../src/services/replan';
 import { alarmKit } from '../../src/services/alarmKit';
 
@@ -69,7 +69,7 @@ export default function BedsideScreen() {
     await prepareAudioSession();
     await keepScreenAwake(true);
     const clock = new BedsideClock(isDemo ? DEMO_ACCEL : 1);
-    const provider = makeSleepProvider(clock, clock.now(), isDemo ? 7 : undefined);
+    const provider = makeSleepProvider(clock, clock.now(), isDemo ? 7 : undefined, isDemo);
     const s = new WakeScheduler({
       clock,
       provider,
@@ -96,21 +96,32 @@ export default function BedsideScreen() {
     }
     scheduler.current = s;
     tick.current = setInterval(() => {
-      void s.tick().then(() => {
+      void s.tick().then(async () => {
         const a = s.scheduled[0];
         if (a && !a.fired) {
           const simNow = clock.now();
+          let freshness = '';
+          try {
+            // Cached by the provider (≤ 1 API call/min) — shows the real sync lag.
+            const samples = await provider.getLatestSamples('me', new Date(simNow.getTime() - 3 * 60 * 60_000));
+            const newest = samples.at(-1);
+            freshness = newest
+              ? ` · data ${Math.max(0, Math.round((simNow.getTime() - new Date(newest.tsUtc).getTime()) / 60_000))} min old (${newest.stage})`
+              : ' · no sleep data yet';
+          } catch (err) {
+            freshness = ` · data error: ${String(err).slice(0, 60)}`;
+          }
           setStatus(
-            simNow < a.windowStartUtc
+            (simNow < a.windowStartUtc
               ? `Window opens ${fmtTime(a.windowStartUtc, settings.tz)}${isDemo ? ` (sim clock ${fmtTime(simNow, settings.tz)})` : ''}`
-              : `In window — watching sleep stages${isDemo ? ` (sim clock ${fmtTime(simNow, settings.tz)})` : ''}`,
+              : `In window — watching sleep stages${isDemo ? ` (sim clock ${fmtTime(simNow, settings.tz)})` : ''}`) + freshness,
           );
         }
       });
     }, isDemo ? DEMO_TICK_MS : REAL_TICK_MS);
     setDemo(isDemo);
     setArmed(true);
-    setStatus(isDemo ? 'Demo night started (60× speed)' : 'Armed');
+    setStatus(isDemo ? 'Demo night started (60× speed)' : usingRealData() ? 'Armed — reading your Fitbit Air via Google Health' : 'Armed — simulated sleep data');
   }
 
   function disarm() {
