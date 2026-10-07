@@ -1,5 +1,6 @@
 export * from './types.js';
 export * from './health/types.js';
+export * from './metrics/index.js';
 export * from './wake/decide.js';
 export * from './wake/scheduler.js';
 export * from './providers/types.js';
