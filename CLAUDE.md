@@ -142,8 +142,17 @@ packages/core/src/
   providers/        types.ts (the seam) · mock/ (Fitbit Air simulator)
   providers/googleHealth/  types · api (client+filters) · oauth (TokenManager) · mapping · provider (+probe) · __fixtures__
   util/tz.ts        Intl-only timezone helpers (wallTimeToUtc, localDateString…)
-  **/*.test.ts      decide, simulation (full nights), plan
-mobile/             see docs/MOBILE.md §5 for the file map
+  health/types.ts   SHARED CONTRACT: NightData (all fields optional), MetricResult, MetricsReport
+  metrics/          multi-method metric engine (computeNightMetrics, estimateStages) — docs/METRICS.md
+  wake/predict.ts   sleep-cycle predictor for late data ('predicted-light' in decide())
+  providers/googleHealth/night.ts  fetchNightData: every Air data type → NightData (per-type errors)
+  providers/compact.ts  compactNight (storage) · providers/mock/night.ts mockNightData/mockHistory tiers
+  nutrition/        food DB types, matcher, portions, macros, protein target — docs/FOOD.md
+  **/*.test.ts      decide, simulation (full nights), plan, metrics, predictor, nutrition
+mobile/             see docs/MOBILE.md §5 for the file map; dashboards read ONLY
+                    src/services/dashboardData.ts (nights → computeNightMetrics);
+                    food: src/services/food + app/food + assets/nutrition (on-device llama.rn);
+                    plugins/withoutPushEntitlement.js keeps free-Apple-ID signing working
 server/src/
   index.ts          bootstrap: config → db → provider → scheduler → cron → fastify
   types.ts          shared domain types + Clock
