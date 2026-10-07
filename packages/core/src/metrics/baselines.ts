@@ -49,6 +49,18 @@ export function baselineStats(history: NightFeatures[], opts: BaselineOptions = 
   set('bedtimeMin', median(bed), 0);
   set('waketimeMin', median(wake), 0);
 
+  if (feats.length > 0) {
+    baselines.counts = {
+      restingHrBpm: rhr.length,
+      rmssdMs: rmssd.length,
+      respiratoryBrpm: resp.length,
+      spo2AvgPct: spo2.length,
+      sleepMinutes: sleep.length,
+      bedtimeMin: timings.length,
+      waketimeMin: timings.length,
+    };
+  }
+
   return {
     baselines,
     counts: { rhr: rhr.length, rmssd: rmssd.length, resp: resp.length, spo2: spo2.length, sleep: sleep.length, timing: timings.length },

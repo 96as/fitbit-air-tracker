@@ -8,6 +8,7 @@ import { baselineStats } from './baselines.js';
 import { breathing, skinTemp } from './breathing.js';
 import { pickBest, type Ctx, type MetricOptions } from './context.js';
 import { fajrWakeEase } from './fajr.js';
+import { withLabel } from './labels.js';
 import { DEFAULT_SLEEP_NEED_MIN, extractFeatures } from './features.js';
 import { moodLink } from './mood.js';
 import { recovery } from './recovery.js';
@@ -43,6 +44,7 @@ export function computeNightMetrics(night: NightData, history: NightData[], opts
   const best: Record<string, MetricResult> = {};
   const add = (id: MetricId, results: MetricResult[]) => {
     if (results.length === 0) return;
+    results = results.map(withLabel);
     all[id] = results;
     best[id] = pickBest(results)!;
   };
