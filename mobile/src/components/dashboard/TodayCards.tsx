@@ -160,11 +160,15 @@ export function RecoveryCard({ report, night }: CardProps) {
 // --- Breathing -----------------------------------------------------------------
 
 export function BreathingCard({ report, night }: CardProps) {
+  // The breathing metric has two methods with different units: respiratory-v1
+  // (breaths/min) and spo2-v1 (%). Read each from its own result.
   const r = best(report, 'breathing');
-  const brpm = r?.value ?? night?.respiratory?.fullSleepBrpm ?? undefined;
-  const normalBrpm = r?.components?.baselineBrpm ?? report?.baselines.respiratoryBrpm;
-  const spo2 = r?.components?.spo2AvgPct ?? night?.dailySpo2?.avgPct;
-  const normalSpo2 = r?.components?.spo2BaselinePct ?? report?.baselines.spo2AvgPct;
+  const resp = report?.all.breathing?.find((x) => x.method.startsWith('respiratory'));
+  const ox = report?.all.breathing?.find((x) => x.method.startsWith('spo2'));
+  const brpm = resp?.value ?? night?.respiratory?.fullSleepBrpm ?? undefined;
+  const normalBrpm = resp?.components?.baselineBrpm ?? report?.baselines.respiratoryBrpm;
+  const spo2 = ox?.value ?? night?.dailySpo2?.avgPct;
+  const normalSpo2 = ox?.components?.baselinePct ?? report?.baselines.spo2AvgPct;
 
   if (brpm == null && spo2 == null) {
     return (

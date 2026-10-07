@@ -110,6 +110,9 @@ describe('computeNightMetrics — data tiers', () => {
     expect(methods(r, 'sleepScore')).toEqual(['stages-v1', 'duration-only-v1']);
     expect(methods(r, 'recovery')).toEqual(['sleep-only-v1']);
     expect(r.best.recovery!.confidence).toBe('low');
+    // Sleep alone never green-lights hard training.
+    expect(r.best.recovery!.label).not.toBe('Train hard');
+    expect(r.best.recovery!.components?.recommendation).toBeLessThan(2);
     expect(r.all.breathing).toBeUndefined();
     expect(r.all.skinTemp).toBeUndefined();
     expect(r.all.moodLink).toBeUndefined();

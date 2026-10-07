@@ -96,7 +96,10 @@ function build(ctx: Ctx, sleep: { value: number; inputs: string[] } | undefined)
     const score = clamp(c.value - pen, 0, 100);
     const physio = present.filter(([k]) => k !== 'sleep').map(([, [p]]) => p.confidence);
     const confidence = cap(physio.length ? minConf(...physio) : 'low', v.maxConf);
-    const rec = recommendation(score, f);
+    let rec = recommendation(score, f);
+    // Sleep alone says nothing about how recovered the body is: never green-light
+    // hard training without at least one physiological signal (HRV or resting HR).
+    if (v.method === 'sleep-only-v1' && rec.code === 2) rec = { code: 1, text: 'train light' };
     const why = present.map(([, [p]]) => p.phrase);
     if (pen >= 3) why.push(`skin temperature +${f.skinTempDeltaC!.toFixed(1)} °C (possible illness signal)`);
     const inputs = present.flatMap(([, [p]]) => p.inputs).concat(pen > 0 ? ['skinTempDeltaC'] : []);

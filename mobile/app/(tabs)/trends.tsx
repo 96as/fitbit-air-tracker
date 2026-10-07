@@ -62,7 +62,7 @@ export default function TrendsScreen() {
       recovery: series((_, r) => bestValue(r, 'recovery')),
       rhr: series((n) => n.restingHrBpm),
       hrv: series((n) => n.dailyHrv?.rmssdMs),
-      breathing: series((n, r) => bestValue(r, 'breathing') ?? n.respiratory?.fullSleepBrpm),
+      breathing: series((n, r) => r?.all.breathing?.find((x) => x.method.startsWith('respiratory'))?.value ?? n.respiratory?.fullSleepBrpm),
       mood: series((n) => {
         const m = moodsOnDate(dash.moods, n.dateLocal, tz);
         return m.length ? m.reduce((a, e) => a + e.score, 0) / m.length : null;

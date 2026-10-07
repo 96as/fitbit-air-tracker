@@ -103,18 +103,20 @@ export function methodLabel(id: string): string {
 }
 
 /** Format a metric value by its id (see conventions in services/dashboardData.ts). */
-export function fmtMetric(r: Pick<MetricResult, 'metric' | 'value' | 'unit'>): string {
+export function fmtMetric(r: Pick<MetricResult, 'metric' | 'method' | 'value' | 'unit'>): string {
   if (r.value == null) return 'no value';
   switch (r.metric) {
     case 'sleepDuration':
     case 'sleepDebt':
       return fmtMinutes(r.value);
     case 'breathing':
-      return `${fmtNum(r.value, 1)} breaths/min`;
+      // The breathing metric has a breaths/min method and an SpO2 (%) method.
+      return r.method.startsWith('spo2') ? `${fmtNum(r.value, 1)}% SpO₂` : `${fmtNum(r.value, 1)} breaths/min`;
     case 'skinTemp':
       return `${fmtSigned(r.value)} °C`;
     case 'moodLink':
-      return `${fmtSigned(r.value)} mood pts`;
+      // Pearson correlation between mood and the strongest sleep factor.
+      return `r = ${r.value.toFixed(2)}`;
     default:
       return r.unit && r.unit !== 'pts' ? `${fmtNum(r.value)} ${r.unit}` : `${fmtNum(r.value)}`;
   }
