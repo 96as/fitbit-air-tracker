@@ -16,7 +16,7 @@ const SCOPE_PREFIX = 'https://www.googleapis.com/auth/googlehealth.';
 /** Read-only scopes this app needs: sleep sessions/stages + heart rate. */
 export const GOOGLE_HEALTH_SCOPES = [
   `${SCOPE_PREFIX}sleep.readonly`,
-  `${SCOPE_PREFIX}activity_and_fitness.readonly`, // heart-rate lives here
+  `${SCOPE_PREFIX}health_metrics_and_measurements.readonly`, // heart-rate, HRV, SpO2, breathing
 ];
 
 export interface TokenSet {

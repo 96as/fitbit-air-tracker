@@ -45,7 +45,7 @@ export default function AlarmsScreen() {
           </View>
           {a.enabled && (
             <>
-              <Stepper label="Latest wake: minutes before prayer" value={a.deadlineOffsetMinutes} onChange={(v) => void save({ ...a, deadlineOffsetMinutes: v })} />
+              <Stepper label="Latest wake: minutes after adhan (− = before)" value={-a.deadlineOffsetMinutes} onChange={(v) => void save({ ...a, deadlineOffsetMinutes: -v })} min={-120} max={60} />
               <Stepper label="Smart wake window" value={a.windowMinutes} onChange={(v) => void save({ ...a, windowMinutes: v })} />
               <Stepper label="Snooze" value={a.snoozeMinutes} onChange={(v) => void save({ ...a, snoozeMinutes: v })} step={1} min={1} max={20} />
             </>

@@ -39,7 +39,8 @@ Google**. Tokens live in the `oauth_tokens` table. `npm run google:probe -w serv
 prints the freshness report from the command line (works on a Pi).
 
 Scopes requested (read-only): `googlehealth.sleep.readonly`,
-`googlehealth.activity_and_fitness.readonly` (heart rate).
+`googlehealth.health_metrics_and_measurements.readonly` (heart rate, HRV,
+SpO2, respiratory rate).
 
 ## 3. API contract we implement (`packages/core/src/providers/googleHealth/`)
 

@@ -108,7 +108,7 @@ export function defaultAlarms(): WakeAlarm[] {
     maxSnoozes: 2,
   };
   return [
-    { ...base, id: 'fajr', kind: 'prayer', prayer: 'fajr', enabled: true, windowMinutes: 45, deadlineOffsetMinutes: 20 },
+    { ...base, id: 'fajr', kind: 'prayer', prayer: 'fajr', enabled: true, windowMinutes: 45, deadlineOffsetMinutes: -15 },
     { ...base, id: 'qiyam', kind: 'prayer', prayer: 'qiyam', enabled: false, windowMinutes: 30, deadlineOffsetMinutes: 0 },
     { ...base, id: 'dhuhr', kind: 'prayer', prayer: 'dhuhr', enabled: false, windowMinutes: 0, deadlineOffsetMinutes: 0 },
     { ...base, id: 'asr', kind: 'prayer', prayer: 'asr', enabled: false, windowMinutes: 0, deadlineOffsetMinutes: 0 },
