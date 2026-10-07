@@ -1,22 +1,34 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { localDateString } from '@fitbit-air-tracker/core';
 import { useStore } from '../../src/store';
+import { moodsOnDate } from '../../src/moodStore';
 import { Button, Card, H2, Muted, Screen, Stat } from '../../src/components/ui';
-import { Hypnogram } from '../../src/components/Hypnogram';
 import { colors, fmtDate, fmtTime, PRAYER_LABELS } from '../../src/theme';
 import { refreshTimetable } from '../../src/services/prayerTimes';
 import { labelFor, replan } from '../../src/services/replan';
+import { useDashboardData } from '../../src/services/dashboardData';
+import {
+  BreathingCard,
+  FajrWakeCard,
+  MoodCard,
+  RecoveryCard,
+  RhythmCard,
+  SleepCard,
+} from '../../src/components/dashboard/TodayCards';
 
-export default function TonightScreen() {
-  const { settings, planned, timings, hijriByDate, sessions, permissions } = useStore();
+export default function TodayScreen() {
+  const { settings, planned, timings, hijriByDate, permissions } = useStore();
+  const dash = useDashboardData();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const tz = settings.tz;
   const today = localDateString(new Date(), tz);
   const todayTimes = timings[today];
   const next = planned[0];
-  const lastNight = sessions.find((s) => !s.isNap) ?? sessions[0];
+  const report = dash.today;
+  const night = dash.nights.find((n) => n.dateLocal === today);
+  const todayMoods = moodsOnDate(dash.moods, today, tz);
 
   const refresh = async () => {
     setBusy(true);
@@ -32,7 +44,9 @@ export default function TonightScreen() {
   };
 
   return (
-    <Screen title="Tonight">
+    <Screen title="Today">
+      {hijriByDate[today] && <Muted>{hijriByDate[today]}</Muted>}
+
       {permissions.alarmKit !== 'granted' && (
         <Card style={{ borderColor: colors.accent }}>
           <Text style={{ color: colors.accent, fontWeight: '600' }}>
@@ -43,6 +57,7 @@ export default function TonightScreen() {
         </Card>
       )}
 
+      <H2>Next wake-up</H2>
       {next ? (
         <Card>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{labelFor(next)}</Text>
@@ -67,7 +82,27 @@ export default function TonightScreen() {
         </Card>
       )}
 
-      <H2>Prayer times · {hijriByDate[today] ?? today}</H2>
+      <H2>Last night</H2>
+      {dash.source === 'fixture' && (
+        <Card style={{ borderStyle: 'dashed' }}>
+          <Muted>Showing sample health data so you can explore. Connect your Fitbit Air in Settings to see your own.</Muted>
+        </Card>
+      )}
+      {dash.loading ? (
+        <Card>
+          <ActivityIndicator color={colors.muted} />
+        </Card>
+      ) : (
+        <>
+          <FajrWakeCard report={report} night={night} tz={tz} />
+          <SleepCard report={report} night={night} tz={tz} />
+          <MoodCard report={report} todayMoods={todayMoods} />
+          <BreathingCard report={report} night={night} />
+          <RecoveryCard report={report} night={night} />
+          <RhythmCard report={report} />
+        </>
+      )}
+      <H2>Prayer times today</H2>
       <Card>
         {todayTimes ? (
           ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha', 'lastthird'].map(
@@ -86,19 +121,9 @@ export default function TonightScreen() {
         <Button title={busy ? 'Refreshing…' : 'Refresh prayer times'} kind="secondary" onPress={() => void refresh()} disabled={busy} />
       </Card>
 
-      <H2>Last night</H2>
-      <Card>{lastNight ? <Hypnogram session={lastNight} tz={tz} /> : <Muted>No sleep data yet.</Muted>}</Card>
-
-      {sessions.length > 1 && (
-        <>
-          <H2>Recent nights</H2>
-          {sessions.slice(1, 7).map((s) => (
-            <Card key={s.id}>
-              <Hypnogram session={s} tz={tz} />
-            </Card>
-          ))}
-        </>
-      )}
+      <Muted>
+        {'\n'}Wellness information to help you plan your day — not medical advice.
+      </Muted>
     </Screen>
   );
 }

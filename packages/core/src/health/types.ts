@@ -97,6 +97,11 @@ export interface MetricResult {
   explanation: string;
   /** Optional sub-scores / parts (0–100 or raw), for the breakdown UI. */
   components?: Record<string, number>;
+  /**
+   * ≤3-word plain status for the dashboard headline, e.g. recovery
+   * "Train hard" | "Train light" | "Rest"; scores "Great" | "Good" | "Fair" | "Poor".
+   */
+  label?: string;
 }
 
 /** Rolling personal baselines (median of the last N nights, default 30). */
@@ -110,6 +115,8 @@ export interface Baselines {
   /** Median bedtime / wake time as minutes after local midnight (bedtime may be negative = before midnight). */
   bedtimeMin?: number;
   waketimeMin?: number;
+  /** How many nights each baseline is built from (UI shows "still learning" below 14). */
+  counts?: Partial<Record<'restingHrBpm' | 'rmssdMs' | 'respiratoryBrpm' | 'spo2AvgPct' | 'sleepMinutes' | 'bedtimeMin' | 'waketimeMin', number>>;
 }
 
 export interface MetricsReport {

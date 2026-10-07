@@ -14,7 +14,8 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.muted,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Tonight', tabBarIcon: icon('🌙') }} />
+      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: icon('🌙') }} />
+      <Tabs.Screen name="trends" options={{ title: 'Trends', tabBarIcon: icon('📈') }} />
       <Tabs.Screen name="alarms" options={{ title: 'Alarms', tabBarIcon: icon('⏰') }} />
       <Tabs.Screen name="bedside" options={{ title: 'Bedside', tabBarIcon: icon('🛏️') }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: icon('⚙️') }} />
