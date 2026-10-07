@@ -108,10 +108,16 @@ function predictNow(input: DecideInput, newest: SleepSample, ageMs: number): Pre
   if (input.predictive === false || !windowStart) return null;
   if (now.getTime() < windowStart.getTime() || now.getTime() >= deadline.getTime()) return null;
   if (ageMs < (input.predictMinLagMin ?? 5) * MINUTE_MS || ageMs > (input.predictMaxLagMin ?? 30) * MINUTE_MS) return null;
-  return predictLightWindow({
-    segments: segmentsFromSamples(input.history ?? input.samples),
-    lastDataUtc: new Date(new Date(newest.tsUtc).getTime() + MINUTE_MS),
-    nowUtc: now,
-    preferredStages: input.preferredStages,
-  });
+  // The predictor is an optimization: if it ever throws on odd data, behave as
+  // if it weren't there rather than letting decide() throw (invariant 1).
+  try {
+    return predictLightWindow({
+      segments: segmentsFromSamples(input.history ?? input.samples),
+      lastDataUtc: new Date(new Date(newest.tsUtc).getTime() + MINUTE_MS),
+      nowUtc: now,
+      preferredStages: input.preferredStages,
+    });
+  } catch {
+    return null;
+  }
 }
