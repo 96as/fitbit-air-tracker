@@ -13,10 +13,11 @@ export const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 
 const SCOPE_PREFIX = 'https://www.googleapis.com/auth/googlehealth.';
 
-/** Read-only scopes this app needs: sleep sessions/stages + heart rate. */
+/** Read-only scopes this app needs (see NIGHT_DATA_TYPES in night.ts for the type → scope map). */
 export const GOOGLE_HEALTH_SCOPES = [
   `${SCOPE_PREFIX}sleep.readonly`,
-  `${SCOPE_PREFIX}health_metrics_and_measurements.readonly`, // heart-rate, HRV, SpO2, breathing
+  `${SCOPE_PREFIX}health_metrics_and_measurements.readonly`, // heart-rate, HRV, SpO2, breathing, resting HR, skin temp
+  `${SCOPE_PREFIX}activity_and_fitness.readonly`, // steps, sedentary-period (motion proxies — there is no raw accelerometer)
 ];
 
 export interface TokenSet {

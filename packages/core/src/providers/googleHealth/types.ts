@@ -82,10 +82,107 @@ export interface GhObservationSampleTime {
   civilTime?: GhCivilDateTime;
 }
 
+export type GhMotionContext = 'MOTION_CONTEXT_UNSPECIFIED' | 'ACTIVE' | 'SEDENTARY';
+
 export interface GhHeartRate {
   sampleTime: GhObservationSampleTime;
   beatsPerMinute: string | number;
-  metadata?: { motionContext?: string; sensorLocation?: string };
+  metadata?: { motionContext?: GhMotionContext | string; sensorLocation?: string };
+}
+
+/** google.type.Date — a calendar date in the user's timezone. */
+export interface GhDate {
+  year?: number;
+  month?: number;
+  day?: number;
+}
+
+export interface GhObservationTimeInterval {
+  startTime: string; // RFC-3339
+  endTime: string; // RFC-3339
+  startUtcOffset?: string; // Duration "10800s"
+  endUtcOffset?: string;
+  civilStartTime?: GhCivilDateTime;
+  civilEndTime?: GhCivilDateTime;
+}
+
+/** `heart-rate-variability` (sample). Doubles arrive as JSON numbers. */
+export interface GhHeartRateVariability {
+  sampleTime: GhObservationSampleTime;
+  rootMeanSquareOfSuccessiveDifferencesMilliseconds?: number;
+  standardDeviationMilliseconds?: number;
+  metadata?: { lowFrequencyPower?: number; highFrequencyPower?: number };
+}
+
+/** `daily-heart-rate-variability` (daily). nonRemHeartRateBeatsPerMinute is int64 → string. */
+export interface GhDailyHeartRateVariability {
+  date: GhDate;
+  averageHeartRateVariabilityMilliseconds?: number;
+  deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds?: number;
+  nonRemHeartRateBeatsPerMinute?: string | number;
+  entropy?: number;
+}
+
+/** `daily-resting-heart-rate` (daily). beatsPerMinute is int64 → string. */
+export interface GhDailyRestingHeartRate {
+  date: GhDate;
+  beatsPerMinute: string | number;
+  dailyRestingHeartRateMetadata?: { calculationMethod?: 'CALCULATION_METHOD_UNSPECIFIED' | 'WITH_SLEEP' | 'ONLY_WITH_AWAKE_DATA' | string };
+}
+
+/** `oxygen-saturation` (sample). */
+export interface GhOxygenSaturation {
+  sampleTime: GhObservationSampleTime;
+  percentage: number;
+}
+
+/** `daily-oxygen-saturation` (daily, computed over the main sleep). */
+export interface GhDailyOxygenSaturation {
+  date: GhDate;
+  averagePercentage: number;
+  lowerBoundPercentage?: number;
+  upperBoundPercentage?: number;
+  standardDeviationPercentage?: number;
+}
+
+export interface GhRespiratoryRateStats {
+  breathsPerMinute: number;
+  standardDeviation?: number;
+  signalToNoise?: number;
+}
+
+/** `respiratory-rate-sleep-summary` (sample; one per sleep, naps included). */
+export interface GhRespiratoryRateSleepSummary {
+  sampleTime: GhObservationSampleTime;
+  fullSleepStats: GhRespiratoryRateStats;
+  lightSleepStats?: GhRespiratoryRateStats;
+  deepSleepStats?: GhRespiratoryRateStats;
+  remSleepStats?: GhRespiratoryRateStats;
+}
+
+/** `daily-respiratory-rate` (daily, main sleep). */
+export interface GhDailyRespiratoryRate {
+  date: GhDate;
+  breathsPerMinute: number;
+}
+
+/** `daily-sleep-temperature-derivations` (daily). */
+export interface GhDailySleepTemperatureDerivations {
+  date: GhDate;
+  nightlyTemperatureCelsius: number;
+  baselineTemperatureCelsius?: number;
+  relativeNightlyStddev30dCelsius?: number;
+}
+
+/** `steps` (interval, 1-minute storage resolution). count is int64 → string. */
+export interface GhSteps {
+  interval: GhObservationTimeInterval;
+  count: string | number;
+}
+
+/** `sedentary-period` (interval): not moving while wearing the device. */
+export interface GhSedentaryPeriod {
+  interval: GhObservationTimeInterval;
 }
 
 export interface GhDataSource {
@@ -100,6 +197,16 @@ export interface GhDataPoint {
   name?: string;
   sleep?: GhSleep;
   heartRate?: GhHeartRate;
+  heartRateVariability?: GhHeartRateVariability;
+  dailyHeartRateVariability?: GhDailyHeartRateVariability;
+  dailyRestingHeartRate?: GhDailyRestingHeartRate;
+  oxygenSaturation?: GhOxygenSaturation;
+  dailyOxygenSaturation?: GhDailyOxygenSaturation;
+  respiratoryRateSleepSummary?: GhRespiratoryRateSleepSummary;
+  dailyRespiratoryRate?: GhDailyRespiratoryRate;
+  dailySleepTemperatureDerivations?: GhDailySleepTemperatureDerivations;
+  steps?: GhSteps;
+  sedentaryPeriod?: GhSedentaryPeriod;
   dataSource?: GhDataSource;
 }
 

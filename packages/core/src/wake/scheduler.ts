@@ -19,6 +19,10 @@ export interface WakeSchedulerOptions {
   /** Provider failures are reported here and never stop the deadline rule. */
   onError?: (error: unknown, alarm: ScheduledAlarm) => void;
   stalenessLimitMin?: number;
+  /** Late-data cycle predictor (FireReason 'predicted-light'). Default true. */
+  predictive?: boolean;
+  /** How far before the window to fetch history for the predictor (minutes, default 600). */
+  historyLookbackMin?: number;
 }
 
 const MINUTE_MS = 60_000;
@@ -73,21 +77,31 @@ export class WakeScheduler {
       const now = this.opts.clock.now();
       for (const alarm of this.alarms) {
         if (alarm.fired || now < alarm.windowStartUtc) continue;
+        const predictive = this.opts.predictive !== false;
         const lookback = new Date(alarm.windowStartUtc.getTime() - 30 * MINUTE_MS);
-        let samples: SleepSample[] = [];
+        const historyFrom = predictive
+          ? new Date(alarm.windowStartUtc.getTime() - (this.opts.historyLookbackMin ?? 600) * MINUTE_MS)
+          : lookback;
+        let history: SleepSample[] = [];
         try {
-          samples = await this.opts.provider.getLatestSamples(alarm.policy.userId, lookback);
+          history = await this.opts.provider.getLatestSamples(alarm.policy.userId, historyFrom);
         } catch (err) {
           // Invariant 1: a dead/unauthenticated provider degrades to "no data" —
           // the deadline still fires.
           this.opts.onError?.(err, alarm);
         }
+        // The stage / HR-rise rules see exactly the short lookback they always did;
+        // only the predictor gets the whole night.
+        const samples = history.filter((s) => new Date(s.tsUtc).getTime() >= lookback.getTime());
         const decision = decide({
           now,
           deadline: alarm.deadlineUtc,
           preferredStages: alarm.policy.preferredStages,
           samples,
           stalenessLimitMin: this.opts.stalenessLimitMin,
+          windowStart: alarm.windowStartUtc,
+          history,
+          predictive,
         });
         if (decision.action === 'fire') {
           alarm.fired = true;

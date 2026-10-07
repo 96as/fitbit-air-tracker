@@ -1,0 +1,25 @@
+{
+ "dataPoints": [
+  {
+   "dailyHeartRateVariability": {
+    "date": {
+     "year": 2026,
+     "month": 7,
+     "day": 4
+    },
+    "averageHeartRateVariabilityMilliseconds": 46.7,
+    "deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds": 53.1,
+    "nonRemHeartRateBeatsPerMinute": "55",
+    "entropy": 2.91
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}
