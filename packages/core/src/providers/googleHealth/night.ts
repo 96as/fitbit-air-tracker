@@ -95,12 +95,6 @@ export interface NightFetchResult {
   errors: Record<string, string>;
   /** dataType → raw data points received (0 = type returned nothing for this night). */
   counts: Record<string, number>;
-  /**
-   * heartRate.metadata.motionContext per minute (1 = ACTIVE, 0 = SEDENTARY).
-   * Not part of NightData yet (contract is frozen); also used as the
-   * stillPeriods fallback when `sedentary-period` is unavailable.
-   */
-  heartRateMotion?: TimedValue[];
 }
 
 function addDaysToDate(dateLocal: string, days: number): string {
@@ -156,14 +150,14 @@ export async function fetchNightData(client: GoogleHealthClient, params: NightFe
     }
   });
 
-  const { night, heartRateMotion } = assembleNightData(points, {
+  const night = assembleNightData(points, {
     dateLocal: params.dateLocal,
     tz: params.tz,
     userId: params.userId ?? 'me',
     startUtc,
     endUtc,
   });
-  return { night, errors, counts, ...(heartRateMotion ? { heartRateMotion } : {}) };
+  return { night, errors, counts };
 }
 
 const defined = <T>(x: T | undefined): x is T => x != null;
@@ -173,7 +167,7 @@ const byTs = (a: { tsUtc: string }, b: { tsUtc: string }) => a.tsUtc.localeCompa
 export function assembleNightData(
   points: Partial<Record<NightDataType, GhDataPoint[]>>,
   ctx: { dateLocal: string; tz: string; userId: string; startUtc: Date; endUtc: Date },
-): { night: NightData; heartRateMotion?: TimedValue[] } {
+): NightData {
   const night: NightData = { dateLocal: ctx.dateLocal, tz: ctx.tz };
   const sameDay = <T extends { dateLocal: string }>(xs: T[]) => xs.find((x) => x.dateLocal === ctx.dateLocal) ?? xs[0];
 
@@ -186,12 +180,13 @@ export function assembleNightData(
     night.stagesProcessed = meta.processed !== false;
   }
 
-  // Heart rate (1 s resolution) → per-minute mean; motionContext per minute.
+  // Heart rate (1 s resolution) → per-minute mean; motionContext per minute (→ heartRateMotion).
   const hrSamples = (points['heart-rate'] ?? []).map(mapHeartRate).filter(defined);
   let heartRateMotion: TimedValue[] | undefined;
   if (hrSamples.length > 0) {
     night.heartRate = perMinuteMean(hrSamples.map((h) => ({ tsUtc: h.tsUtc, value: h.bpm })));
     heartRateMotion = motionPerMinute(hrSamples);
+    if (heartRateMotion.length > 0) night.heartRateMotion = heartRateMotion.map((m) => ({ tsUtc: m.tsUtc, active: m.value === 1 }));
   }
 
   const hrv = (points['heart-rate-variability'] ?? []).map(mapHrv).filter(defined).sort(byTs);
@@ -242,7 +237,7 @@ export function assembleNightData(
     if (fromHr.length > 0) night.stillPeriods = fromHr;
   }
 
-  return { night, ...(heartRateMotion && heartRateMotion.length > 0 ? { heartRateMotion } : {}) };
+  return night;
 }
 
 function pickMainSession(sessions: GoogleSleepSession[]): GoogleSleepSession | undefined {

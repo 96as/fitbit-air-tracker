@@ -79,7 +79,7 @@ describe('filterForType — exact AIP-160 filters per record type', () => {
 describe('fetchNightData', () => {
   it('fetches every type and maps each into NightData', async () => {
     const { client, calls } = fakeClient();
-    const { night, errors, counts, heartRateMotion } = await fetchNightData(client, PARAMS);
+    const { night, errors, counts } = await fetchNightData(client, PARAMS);
 
     expect(errors).toEqual({});
     expect(new Set(calls.map((u) => typeOf(u.toString())))).toEqual(new Set(ALL_NIGHT_DATA_TYPES));
@@ -98,10 +98,10 @@ describe('fetchNightData', () => {
     expect(night.heartRate![0]).toEqual({ tsUtc: '2026-07-03T20:30:00.000Z', value: 57 });
     expect(night.heartRate!.map((h) => h.tsUtc)).toEqual([...night.heartRate!.map((h) => h.tsUtc)].sort());
     expect(night.heartRate).toHaveLength(4);
-    expect(heartRateMotion).toEqual([
-      { tsUtc: '2026-07-03T20:30:00.000Z', value: 0 },
-      { tsUtc: '2026-07-03T21:00:00.000Z', value: 0 },
-      { tsUtc: '2026-07-04T01:38:00.000Z', value: 1 },
+    expect(night.heartRateMotion).toEqual([
+      { tsUtc: '2026-07-03T20:30:00.000Z', active: false },
+      { tsUtc: '2026-07-03T21:00:00.000Z', active: false },
+      { tsUtc: '2026-07-04T01:38:00.000Z', active: true },
     ]);
 
     expect(night.hrv).toEqual([
@@ -209,24 +209,24 @@ describe('assembleNightData', () => {
         },
       });
     }
-    const { night } = assembleNightData({ 'heart-rate': hr }, ctx);
+    const night = assembleNightData({ 'heart-rate': hr }, ctx);
     expect(night.stillPeriods).toEqual([{ startUtc: '2026-07-03T21:00:00.000Z', endUtc: '2026-07-03T21:12:00.000Z' }]);
   });
 
   it('marks in-progress nights (metadata.processed=false) and skips nap-only data', async () => {
     const inProgress = (await import('./__fixtures__/sleep-inprogress.json')).default as GhListDataPointsResponse;
-    expect(assembleNightData({ sleep: inProgress.dataPoints }, ctx).night.stagesProcessed).toBe(false);
-    const napOnly = assembleNightData({ sleep: (sleepClassic as GhListDataPointsResponse).dataPoints }, ctx).night;
+    expect(assembleNightData({ sleep: inProgress.dataPoints }, ctx).stagesProcessed).toBe(false);
+    const napOnly = assembleNightData({ sleep: (sleepClassic as GhListDataPointsResponse).dataPoints }, ctx);
     expect(napOnly.session).toBeUndefined();
   });
 
   it('daily respiratory rate fills fullSleepBrpm when there is no per-sleep summary', () => {
-    const { night } = assembleNightData({ 'daily-respiratory-rate': FIXTURES['daily-respiratory-rate'].dataPoints }, ctx);
+    const night = assembleNightData({ 'daily-respiratory-rate': FIXTURES['daily-respiratory-rate'].dataPoints }, ctx);
     expect(night.respiratory).toEqual({ fullSleepBrpm: 14.1 });
   });
 
   it('skin temperature without a baseline yields no delta', () => {
-    const { night } = assembleNightData(
+    const night = assembleNightData(
       { 'daily-sleep-temperature-derivations': [{ dailySleepTemperatureDerivations: { date: { year: 2026, month: 7, day: 4 }, nightlyTemperatureCelsius: 34 } }] },
       ctx,
     );

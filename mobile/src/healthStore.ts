@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { NightData } from '@fitbit-air-tracker/core';
+import { compactNight, type NightData } from '@fitbit-air-tracker/core';
 
 /**
  * Per-night health data on the phone (the shared `NightData` contract), filled
@@ -10,6 +10,8 @@ import type { NightData } from '@fitbit-air-tracker/core';
  */
 
 export const MAX_NIGHTS = 60;
+/** Newest nights kept at full per-minute resolution; older ones are compacted to 5-min (≈ 1 MB for 60 nights). */
+export const FULL_RES_NIGHTS = 3;
 
 export type HealthSource = 'google' | 'mock';
 
@@ -36,10 +38,13 @@ export interface HealthState {
   reset(source?: HealthSource): void;
 }
 
-function capNewest<T>(rec: Record<string, T>, max: number): Record<string, T> {
-  const keep = Object.keys(rec).sort().slice(-max);
-  const out: Record<string, T> = {};
-  for (const k of keep) out[k] = rec[k]!;
+/** Keep the newest MAX_NIGHTS; compact all but the newest FULL_RES_NIGHTS (idempotent). */
+function capAndCompact(rec: Record<string, NightData>): Record<string, NightData> {
+  const keep = Object.keys(rec).sort().slice(-MAX_NIGHTS);
+  const out: Record<string, NightData> = {};
+  keep.forEach((k, i) => {
+    out[k] = i < keep.length - FULL_RES_NIGHTS ? compactNight(rec[k]!, 5) : rec[k]!;
+  });
   return out;
 }
 
@@ -63,7 +68,7 @@ export const useHealthStore = create<HealthState>()(
             if (errors[n.dateLocal] && Object.keys(errors[n.dateLocal]!).length > 0) mergedErrors[n.dateLocal] = errors[n.dateLocal]!;
             else delete mergedErrors[n.dateLocal];
           }
-          const capped = capNewest(merged, MAX_NIGHTS);
+          const capped = capAndCompact(merged);
           const cappedErrors: Record<string, TypeErrors> = {};
           for (const d of Object.keys(mergedErrors)) if (capped[d]) cappedErrors[d] = mergedErrors[d]!;
           return { nights: capped, errors: cappedErrors, source, lastSyncUtc: atUtc, lastError: undefined };

@@ -16,7 +16,7 @@ export type MockNightField = Exclude<keyof NightData, 'dateLocal' | 'tz'>;
 
 const ALL_FIELDS: MockNightField[] = [
   'session', 'stagesProcessed', 'heartRate', 'hrv', 'dailyHrv', 'restingHrBpm', 'spo2', 'dailySpo2',
-  'respiratory', 'skinTempDeltaC', 'steps', 'stillPeriods', 'phoneMotion', 'mood',
+  'respiratory', 'skinTempDeltaC', 'steps', 'stillPeriods', 'heartRateMotion', 'phoneMotion', 'mood',
 ];
 const except = (...keep: MockNightField[]) => ALL_FIELDS.filter((f) => !keep.includes(f));
 
@@ -30,8 +30,8 @@ export const MOCK_DATA_TIERS = {
   'summaries-only': ['session', 'stagesProcessed', 'heartRate', 'hrv', 'spo2', 'steps', 'stillPeriods'] as MockNightField[],
   /** Only per-minute heart rate. */
   'hr-only': except('heartRate'),
-  /** Only motion proxies (steps + still periods). */
-  'motion-only': except('steps', 'stillPeriods'),
+  /** Only motion proxies (steps + still periods + HR motion context). */
+  'motion-only': except('steps', 'stillPeriods', 'heartRateMotion'),
   /** Nothing at all (band not worn / not synced). */
   none: [...ALL_FIELDS],
 } satisfies Record<string, MockNightField[]>;
@@ -174,6 +174,10 @@ export function mockNightData(opts: MockNightOptions): NightData {
     skinTempDeltaC: Math.round(((rand() - 0.5) * 0.5 + strain * 0.15) * 100) / 100,
     steps,
     stillPeriods: stillRuns(steps),
+    heartRateMotion: (() => {
+      const stepAt = new Map(steps.map((x) => [x.tsUtc, x.value]));
+      return samples.map((x) => ({ tsUtc: x.tsUtc, active: (stepAt.get(x.tsUtc) ?? 0) > 0 }));
+    })(),
   };
   if (night.dailyHrv && night.dailyHrv.deepSleepRmssdMs === undefined) delete night.dailyHrv.deepSleepRmssdMs;
 

@@ -20,6 +20,24 @@ class BedsideClock implements Clock {
   }
 }
 
+/** Human label for why the alarm rang. `detail` is the decision detail (e.g. "… lag:16min"). */
+function fireReasonLabel(reason: string, detail?: string): string {
+  switch (reason) {
+    case 'light-sleep':
+      return 'Light sleep detected';
+    case 'predicted-light': {
+      const lag = /lag:(\d+)min/.exec(detail ?? '')?.[1];
+      return lag ? `Predicted light sleep (data ~${lag} min old)` : 'Predicted light sleep';
+    }
+    case 'hr-rise':
+      return 'Waking signs (heart rate)';
+    case 'deadline':
+      return 'Latest wake time';
+    default:
+      return reason;
+  }
+}
+
 const REAL_TICK_MS = 30_000;
 const DEMO_TICK_MS = 1_000;
 const DEMO_ACCEL = 60; // 1 real second = 1 simulated minute
@@ -37,6 +55,7 @@ export default function BedsideScreen() {
   const [demo, setDemo] = useState(false);
   const [now, setNow] = useState(new Date());
   const [status, setStatus] = useState('');
+  const [ringDetail, setRingDetail] = useState<string | undefined>(undefined);
   const scheduler = useRef<WakeScheduler | undefined>(undefined);
   const tick = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const snoozeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -74,7 +93,8 @@ export default function BedsideScreen() {
       clock,
       provider,
       onFire: (alarm: ScheduledAlarm, decision: FireDecision) => {
-        setStatus(`Fired: ${decision.reason}${decision.detail ? ` (${decision.detail})` : ''}`);
+        setStatus(`Fired: ${fireReasonLabel(decision.reason, decision.detail)}${decision.detail ? ` (${decision.detail})` : ''}`);
+        setRingDetail(decision.detail);
         fire(
           {
             alarmId: alarm.policy.id,
@@ -177,7 +197,7 @@ export default function BedsideScreen() {
         <Card style={{ borderColor: colors.danger, borderWidth: 2 }}>
           <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700', textAlign: 'center' }}>Time to wake up 🕌</Text>
           <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 4 }}>
-            {activeRing.label} · {activeRing.reason === 'light-sleep' ? 'light sleep detected' : activeRing.reason}
+            {activeRing.label} · {fireReasonLabel(activeRing.reason, ringDetail)}
           </Text>
           <Button title="I'm awake ✓" onPress={() => void awake()} />
           <Button title="Snooze" kind="secondary" onPress={() => void snooze()} />

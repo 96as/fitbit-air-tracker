@@ -70,6 +70,8 @@ export interface NightData {
   stillPeriods?: TimeInterval[];
   /** Future: iPhone-on-mattress activity counts per minute. */
   phoneMotion?: TimedValue[];
+  /** Per-minute heartRate.metadata.motionContext (Google): active = moving, false = sedentary. */
+  heartRateMotion?: { tsUtc: string; active: boolean }[];
 
   /** Mood check-ins logged in the app (usually the morning after). */
   mood?: MoodEntry[];

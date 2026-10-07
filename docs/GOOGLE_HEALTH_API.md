@@ -71,7 +71,7 @@ and never fails the rest.
 | dataType (scope) | Record | Filter | Source fields → `NightData` |
 |---|---|---|---|
 | `sleep` (sleep) | session | `sleep.interval.end_time` (**end time only**) | main (non-nap) session → `session`, `metadata.processed` → `stagesProcessed`. Stage enum: AWAKE→awake, LIGHT→light, DEEP→deep, REM→rem, ASLEEP→light (classic), RESTLESS→awake |
-| `heart-rate` (hmm) | sample, 1 s | `heart_rate.sample_time.physical_time` | `beatsPerMinute` (string) → per-minute mean `heartRate`; `metadata.motionContext` ACTIVE/SEDENTARY → result `heartRateMotion` (+ `stillPeriods` fallback) |
+| `heart-rate` (hmm) | sample, 1 s | `heart_rate.sample_time.physical_time` | `beatsPerMinute` (string) → per-minute mean `heartRate`; `metadata.motionContext` ACTIVE/SEDENTARY → `heartRateMotion[{tsUtc, active}]` (+ `stillPeriods` fallback) |
 | `heart-rate-variability` (hmm) | sample | `heart_rate_variability.sample_time.physical_time` | `rootMeanSquareOfSuccessiveDifferencesMilliseconds` → `hrv[].rmssdMs`, `standardDeviationMilliseconds` → `sdnnMs` |
 | `daily-heart-rate-variability` (hmm) | daily | `daily_heart_rate_variability.date` | `averageHeartRateVariabilityMilliseconds` → `dailyHrv.rmssdMs`, `deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds` → `deepSleepRmssdMs`, `nonRemHeartRateBeatsPerMinute` (string) → `nonRemHrBpm` |
 | `daily-resting-heart-rate` (hmm) | daily | `daily_resting_heart_rate.date` | `beatsPerMinute` (string) → `restingHrBpm` |

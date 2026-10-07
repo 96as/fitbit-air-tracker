@@ -22,7 +22,7 @@ describe('mockNightData', () => {
   });
 
   it('fills every field and the night ends on dateLocal (local time)', () => {
-    for (const f of ['session', 'stagesProcessed', 'heartRate', 'hrv', 'dailyHrv', 'restingHrBpm', 'spo2', 'dailySpo2', 'respiratory', 'skinTempDeltaC', 'steps', 'stillPeriods']) {
+    for (const f of ['session', 'stagesProcessed', 'heartRate', 'hrv', 'dailyHrv', 'restingHrBpm', 'spo2', 'dailySpo2', 'respiratory', 'skinTempDeltaC', 'steps', 'stillPeriods', 'heartRateMotion']) {
       expect(night, f).toHaveProperty(f);
     }
     expect(night.session!.tzOffsetMin).toBe(180);
