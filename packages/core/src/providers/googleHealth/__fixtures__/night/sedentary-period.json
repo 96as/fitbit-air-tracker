@@ -1,0 +1,71 @@
+{
+ "dataPoints": [
+  {
+   "sedentaryPeriod": {
+    "interval": {
+     "startTime": "2026-07-03T22:13:00Z",
+     "endTime": "2026-07-04T01:35:00Z",
+     "startUtcOffset": "10800s",
+     "endUtcOffset": "10800s",
+     "civilStartTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 1,
+      "minutes": 13,
+      "seconds": 0
+     },
+     "civilEndTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 4,
+      "minutes": 35,
+      "seconds": 0
+     }
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "sedentaryPeriod": {
+    "interval": {
+     "startTime": "2026-07-03T20:12:00Z",
+     "endTime": "2026-07-03T22:10:00Z",
+     "startUtcOffset": "10800s",
+     "endUtcOffset": "10800s",
+     "civilStartTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 12,
+      "seconds": 0
+     },
+     "civilEndTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 1,
+      "minutes": 10,
+      "seconds": 0
+     }
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

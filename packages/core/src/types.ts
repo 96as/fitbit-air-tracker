@@ -46,7 +46,11 @@ export interface AlarmPolicy {
   maxSnoozes: number;
 }
 
-export type FireReason = 'light-sleep' | 'hr-rise' | 'deadline';
+/**
+ * Why an alarm fired. 'predicted-light' = late data (~15–30 min old) projected
+ * through tonight's sleep cycles says NOW is light sleep (wake/predict.ts).
+ */
+export type FireReason = 'light-sleep' | 'hr-rise' | 'predicted-light' | 'deadline';
 
 export type Decision =
   | { action: 'fire'; reason: FireReason; detail?: string }

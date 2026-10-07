@@ -1,7 +1,8 @@
 import type { GhDataPoint, GhListDataPointsResponse } from './types.js';
 
 /**
- * Minimal Google Health API v4 client (read-only): sleep sessions + heart rate.
+ * Minimal Google Health API v4 client (read-only): sleep sessions, heart rate
+ * and any other data type via listDataPoints().
  * Endpoint: GET https://health.googleapis.com/v4/users/me/dataTypes/{type}/dataPoints
  * Params: filter (AIP-160, only >= and <), pageSize (sleep max 25), pageToken.
  */
@@ -56,9 +57,40 @@ export function sleepFilter(q: SleepQuery): string {
 }
 
 export function heartRateFilter(q: HeartRateQuery): string {
-  let f = `heart_rate.sample_time.physical_time >= "${rfc3339(q.fromUtc)}"`;
-  if (q.toUtc) f += ` AND heart_rate.sample_time.physical_time < "${rfc3339(q.toUtc)}"`;
+  return sampleTimeFilter('heart_rate', q.fromUtc, q.toUtc);
+}
+
+/**
+ * Filter field prefix = the data type with underscores (the API's "filter
+ * parameter" column): `heart-rate-variability` → `heart_rate_variability`.
+ */
+export const filterName = (dataType: string): string => dataType.replace(/-/g, '_');
+
+/** Sample types: `{type}.sample_time.physical_time >= … AND < …` (RFC-3339). */
+export function sampleTimeFilter(filterType: string, fromUtc: Date, toUtc?: Date): string {
+  let f = `${filterType}.sample_time.physical_time >= "${rfc3339(fromUtc)}"`;
+  if (toUtc) f += ` AND ${filterType}.sample_time.physical_time < "${rfc3339(toUtc)}"`;
   return f;
+}
+
+/** Interval types (steps, sedentary-period): filter on `interval.start_time`. */
+export function intervalStartFilter(filterType: string, fromUtc: Date, toUtc?: Date): string {
+  let f = `${filterType}.interval.start_time >= "${rfc3339(fromUtc)}"`;
+  if (toUtc) f += ` AND ${filterType}.interval.start_time < "${rfc3339(toUtc)}"`;
+  return f;
+}
+
+/** Daily types: `{type}.date >= "YYYY-MM-DD" AND {type}.date < "YYYY-MM-DD"` (user-tz dates). */
+export function dailyDateFilter(filterType: string, fromDateLocal: string, toDateLocalExclusive?: string): string {
+  let f = `${filterType}.date >= "${fromDateLocal}"`;
+  if (toDateLocalExclusive) f += ` AND ${filterType}.date < "${toDateLocalExclusive}"`;
+  return f;
+}
+
+export interface ListOptions {
+  /** Max 10000 (sleep/exercise: 25). Default 1440. */
+  pageSize?: number;
+  maxPages?: number;
 }
 
 export class GoogleHealthClient {
@@ -78,6 +110,12 @@ export class GoogleHealthClient {
 
   listHeartRate(q: HeartRateQuery): Promise<GhDataPoint[]> {
     return this.listAll('heart-rate', heartRateFilter(q), Math.min(q.pageSize ?? 1440, 10_000), q.maxPages ?? 5);
+  }
+
+  /** Any data type, all pages up to `maxPages` (results arrive newest-first). */
+  listDataPoints(dataType: string, filter: string, opts: ListOptions = {}): Promise<GhDataPoint[]> {
+    const cap = dataType === 'sleep' || dataType === 'exercise' ? 25 : 10_000;
+    return this.listAll(dataType, filter, Math.min(opts.pageSize ?? 1440, cap), opts.maxPages ?? 5);
   }
 
   /** Raw single page — exposed for probes/tests. */

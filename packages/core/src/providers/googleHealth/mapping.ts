@@ -1,5 +1,6 @@
 import type { SleepSample, SleepSession, SleepStage, SleepStageSegment } from '../../types.js';
-import type { GhDataPoint, GhSleep, GhSleepStageType } from './types.js';
+import type { HrvSample, TimeInterval, TimedValue } from '../../health/types.js';
+import type { GhDataPoint, GhDate, GhSleep, GhSleepStageType } from './types.js';
 
 /** Pure mapping from Google Health API v4 shapes to our normalized model. */
 
@@ -75,9 +76,13 @@ export function mapSleep(dp: GhDataPoint, userId: string): GoogleSleepSession | 
   };
 }
 
+export type MotionContext = 'active' | 'sedentary';
+
 export interface HeartRateSample {
   tsUtc: string;
   bpm: number;
+  /** heartRate.metadata.motionContext (ACTIVE / SEDENTARY), when Google reports it. */
+  motionContext?: MotionContext;
 }
 
 export function mapHeartRate(dp: GhDataPoint): HeartRateSample | undefined {
@@ -85,7 +90,157 @@ export function mapHeartRate(dp: GhDataPoint): HeartRateSample | undefined {
   if (!hr?.sampleTime?.physicalTime) return undefined;
   const bpm = Number(hr.beatsPerMinute);
   if (!Number.isFinite(bpm)) return undefined;
-  return { tsUtc: new Date(hr.sampleTime.physicalTime).toISOString(), bpm };
+  const mc = hr.metadata?.motionContext;
+  const motionContext: MotionContext | undefined = mc === 'ACTIVE' ? 'active' : mc === 'SEDENTARY' ? 'sedentary' : undefined;
+  return { tsUtc: new Date(hr.sampleTime.physicalTime).toISOString(), bpm, ...(motionContext ? { motionContext } : {}) };
+}
+
+/** google.type.Date → "YYYY-MM-DD" (undefined for partial dates). */
+export function ghDateString(d?: GhDate): string | undefined {
+  if (!d?.year || !d.month || !d.day) return undefined;
+  return `${String(d.year).padStart(4, '0')}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
+}
+
+const iso = (t: string) => new Date(t).toISOString();
+
+export function mapHrv(dp: GhDataPoint): HrvSample | undefined {
+  const h = dp.heartRateVariability;
+  if (!h?.sampleTime?.physicalTime) return undefined;
+  const rmssdMs = num(h.rootMeanSquareOfSuccessiveDifferencesMilliseconds);
+  const sdnnMs = num(h.standardDeviationMilliseconds);
+  if (rmssdMs == null && sdnnMs == null) return undefined;
+  return { tsUtc: iso(h.sampleTime.physicalTime), ...(rmssdMs != null ? { rmssdMs } : {}), ...(sdnnMs != null ? { sdnnMs } : {}) };
+}
+
+export interface DailyHrv {
+  dateLocal: string;
+  rmssdMs?: number;
+  deepSleepRmssdMs?: number;
+  nonRemHrBpm?: number;
+}
+
+export function mapDailyHrv(dp: GhDataPoint): DailyHrv | undefined {
+  const d = dp.dailyHeartRateVariability;
+  const dateLocal = ghDateString(d?.date);
+  if (!d || !dateLocal) return undefined;
+  const out: DailyHrv = { dateLocal };
+  const rmssd = num(d.averageHeartRateVariabilityMilliseconds);
+  const deep = num(d.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds);
+  const nonRem = num(d.nonRemHeartRateBeatsPerMinute);
+  if (rmssd != null) out.rmssdMs = rmssd;
+  if (deep != null) out.deepSleepRmssdMs = deep;
+  if (nonRem != null) out.nonRemHrBpm = nonRem;
+  return out;
+}
+
+export function mapDailyRestingHr(dp: GhDataPoint): { dateLocal: string; bpm: number; method?: string } | undefined {
+  const d = dp.dailyRestingHeartRate;
+  const dateLocal = ghDateString(d?.date);
+  const bpm = num(d?.beatsPerMinute);
+  if (!dateLocal || bpm == null) return undefined;
+  const method = d?.dailyRestingHeartRateMetadata?.calculationMethod;
+  return { dateLocal, bpm, ...(method ? { method } : {}) };
+}
+
+export function mapSpo2(dp: GhDataPoint): TimedValue | undefined {
+  const o = dp.oxygenSaturation;
+  const value = num(o?.percentage);
+  if (!o?.sampleTime?.physicalTime || value == null) return undefined;
+  return { tsUtc: iso(o.sampleTime.physicalTime), value };
+}
+
+export function mapDailySpo2(dp: GhDataPoint): { dateLocal: string; avgPct: number; lowerPct?: number; upperPct?: number } | undefined {
+  const d = dp.dailyOxygenSaturation;
+  const dateLocal = ghDateString(d?.date);
+  const avgPct = num(d?.averagePercentage);
+  if (!dateLocal || avgPct == null) return undefined;
+  const lowerPct = num(d?.lowerBoundPercentage);
+  const upperPct = num(d?.upperBoundPercentage);
+  return { dateLocal, avgPct, ...(lowerPct != null ? { lowerPct } : {}), ...(upperPct != null ? { upperPct } : {}) };
+}
+
+export interface RespiratorySummary {
+  tsUtc: string;
+  fullSleepBrpm?: number;
+  lightBrpm?: number;
+  deepBrpm?: number;
+  remBrpm?: number;
+}
+
+export function mapRespiratorySummary(dp: GhDataPoint): RespiratorySummary | undefined {
+  const r = dp.respiratoryRateSleepSummary;
+  if (!r?.sampleTime?.physicalTime) return undefined;
+  const out: RespiratorySummary = { tsUtc: iso(r.sampleTime.physicalTime) };
+  const set = (k: Exclude<keyof RespiratorySummary, 'tsUtc'>, v?: number) => {
+    const n = num(v);
+    if (n != null) out[k] = n;
+  };
+  set('fullSleepBrpm', r.fullSleepStats?.breathsPerMinute);
+  set('lightBrpm', r.lightSleepStats?.breathsPerMinute);
+  set('deepBrpm', r.deepSleepStats?.breathsPerMinute);
+  set('remBrpm', r.remSleepStats?.breathsPerMinute);
+  return Object.keys(out).length > 1 ? out : undefined;
+}
+
+export function mapDailyRespiratory(dp: GhDataPoint): { dateLocal: string; brpm: number } | undefined {
+  const d = dp.dailyRespiratoryRate;
+  const dateLocal = ghDateString(d?.date);
+  const brpm = num(d?.breathsPerMinute);
+  return dateLocal && brpm != null ? { dateLocal, brpm } : undefined;
+}
+
+export interface SleepTemperature {
+  dateLocal: string;
+  nightlyC: number;
+  baselineC?: number;
+  /** nightly − baseline (°C) when Google has a baseline (needs ~30 nights). */
+  deltaC?: number;
+}
+
+export function mapSleepTemperature(dp: GhDataPoint): SleepTemperature | undefined {
+  const d = dp.dailySleepTemperatureDerivations;
+  const dateLocal = ghDateString(d?.date);
+  const nightlyC = num(d?.nightlyTemperatureCelsius);
+  if (!dateLocal || nightlyC == null) return undefined;
+  const baselineC = num(d?.baselineTemperatureCelsius);
+  return {
+    dateLocal,
+    nightlyC,
+    ...(baselineC != null ? { baselineC, deltaC: Math.round((nightlyC - baselineC) * 100) / 100 } : {}),
+  };
+}
+
+/** One `steps` interval (1-minute storage resolution) → value at its start. */
+export function mapSteps(dp: GhDataPoint): TimedValue | undefined {
+  const st = dp.steps;
+  const value = num(st?.count);
+  if (!st?.interval?.startTime || value == null) return undefined;
+  return { tsUtc: iso(st.interval.startTime), value };
+}
+
+export function mapSedentaryPeriod(dp: GhDataPoint): TimeInterval | undefined {
+  const iv = dp.sedentaryPeriod?.interval;
+  if (!iv?.startTime || !iv.endTime) return undefined;
+  return { startUtc: iso(iv.startTime), endUtc: iso(iv.endTime) };
+}
+
+/**
+ * Average sub-minute samples into one value per UTC minute (heart rate is
+ * stored at 1 s resolution; a night at 1 s would be ~30k points). Output is
+ * sorted oldest → newest; values rounded to 0.1.
+ */
+export function perMinuteMean(values: TimedValue[]): TimedValue[] {
+  const buckets = new Map<number, { sum: number; n: number }>();
+  for (const v of values) {
+    const m = Math.floor(new Date(v.tsUtc).getTime() / MINUTE_MS) * MINUTE_MS;
+    const b = buckets.get(m) ?? { sum: 0, n: 0 };
+    b.sum += v.value;
+    b.n += 1;
+    buckets.set(m, b);
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([m, b]) => ({ tsUtc: new Date(m).toISOString(), value: Math.round((b.sum / b.n) * 10) / 10 }));
 }
 
 /**

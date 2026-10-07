@@ -28,7 +28,7 @@ and Google's open-source CLI (`github.com/Google-Health-API/google-health-cli`).
 once (`npx expo prebuild --platform ios && npx expo run:ios --device`) — this
 registers the redirect URL scheme Google requires for iOS clients
 (`com.googleusercontent.apps.<id>`). In the app: Settings ▸ *Sleep data* ▸
-**Connect Google** ▸ sign in ▸ accept the two read-only scopes. The source
+**Connect Google** ▸ sign in ▸ accept the three read-only scopes. The source
 switches to **Google Health (Fitbit Air)** automatically. Tokens live in the
 iOS Keychain (SecureStore) and refresh automatically.
 
@@ -40,23 +40,50 @@ prints the freshness report from the command line (works on a Pi).
 
 Scopes requested (read-only): `googlehealth.sleep.readonly`,
 `googlehealth.health_metrics_and_measurements.readonly` (heart rate, HRV,
-SpO2, respiratory rate).
+SpO2, respiratory rate, resting HR, skin temperature),
+`googlehealth.activity_and_fitness.readonly` (steps, sedentary periods — the
+only motion signals; there is no raw accelerometer in the API).
+**Connected before Oct 2026?** Disconnect and connect again to grant the
+activity scope — until then `steps`/`sedentary-period` report a per-type 403
+and everything else keeps working.
 
 ## 3. API contract we implement (`packages/core/src/providers/googleHealth/`)
 
 | Item | Value |
 |------|-------|
-| Endpoint | `GET https://health.googleapis.com/v4/users/me/dataTypes/{sleep\|heart-rate}/dataPoints` |
-| Params | `filter` (AIP-160; only `>=` and `<`), `pageSize`, `pageToken` → `{dataPoints[], nextPageToken}` |
-| Sleep filter | **end time only**: `sleep.interval.end_time >= "2026-07-04T00:00:00Z"` |
-| Sleep page size | **max 25** (we paginate) |
-| Heart-rate filter | `heart_rate.sample_time.physical_time >= "…Z"` (default page 1440, max 10000) |
-| Sleep point | `sleep.interval{startTime,endTime,startUtcOffset:"10800s"}`, `type: CLASSIC\|STAGES`, `stages[{type,startTime,endTime}]`, `summary{minutesAsleep,…}` (int64 → **strings**), `metadata{processed,nap,mainSleep,stagesStatus}` |
-| Stage enum → ours | AWAKE→awake, LIGHT→light, DEEP→deep, REM→rem, ASLEEP→light (classic), RESTLESS→awake |
-| Heart-rate point | `heartRate.sampleTime.physicalTime`, `beatsPerMinute` (string) |
+| Endpoint | `GET https://health.googleapis.com/v4/users/me/dataTypes/{dataType}/dataPoints` (newest first) |
+| Params | `filter` (AIP-160; only `>=` and `<`, `AND`), `pageSize`, `pageToken` → `{dataPoints[], nextPageToken}` |
+| Filter field | data type with underscores: `heart-rate-variability` → `heart_rate_variability.…` |
+| Page size | default 1440, max 10000; **sleep/exercise max 25** (we paginate) |
+| Query range | rollups: max 14 days for heart-rate (90 days others); we only list one night (≤ 20 h) at a time |
+| int64 / Duration | int64 fields arrive as **strings**; offsets are protobuf Durations (`"10800s"`) |
 | OAuth | `accounts.google.com/o/oauth2/v2/auth` + `oauth2.googleapis.com/token`, PKCE S256, `access_type=offline&prompt=consent` for a refresh token |
-| Poll floor | provider caches 60 s (never hammer the API; the band syncs ~15 min anyway) |
+| Poll floor | provider caches 60 s; phone sync never runs more than once per 60 s (the band syncs ~15 min anyway) |
 | Webhooks | project-level `projects/{p}/subscribers` (need `cloud-platform` IAM) — not needed for personal use; later |
+
+### Data types → `NightData` (`fetchNightData()` in `night.ts`)
+
+One night = window 18:00 local the evening before → 14:00 local on `dateLocal`
+(the date the night ends on; daily summaries are keyed by it). Every type is
+fetched independently — a 403/5xx/empty type is recorded in `errors[type]`
+and never fails the rest.
+
+| dataType (scope) | Record | Filter | Source fields → `NightData` |
+|---|---|---|---|
+| `sleep` (sleep) | session | `sleep.interval.end_time` (**end time only**) | main (non-nap) session → `session`, `metadata.processed` → `stagesProcessed`. Stage enum: AWAKE→awake, LIGHT→light, DEEP→deep, REM→rem, ASLEEP→light (classic), RESTLESS→awake |
+| `heart-rate` (hmm) | sample, 1 s | `heart_rate.sample_time.physical_time` | `beatsPerMinute` (string) → per-minute mean `heartRate`; `metadata.motionContext` ACTIVE/SEDENTARY → result `heartRateMotion` (+ `stillPeriods` fallback) |
+| `heart-rate-variability` (hmm) | sample | `heart_rate_variability.sample_time.physical_time` | `rootMeanSquareOfSuccessiveDifferencesMilliseconds` → `hrv[].rmssdMs`, `standardDeviationMilliseconds` → `sdnnMs` |
+| `daily-heart-rate-variability` (hmm) | daily | `daily_heart_rate_variability.date` | `averageHeartRateVariabilityMilliseconds` → `dailyHrv.rmssdMs`, `deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds` → `deepSleepRmssdMs`, `nonRemHeartRateBeatsPerMinute` (string) → `nonRemHrBpm` |
+| `daily-resting-heart-rate` (hmm) | daily | `daily_resting_heart_rate.date` | `beatsPerMinute` (string) → `restingHrBpm` |
+| `oxygen-saturation` (hmm) | sample, 1 min | `oxygen_saturation.sample_time.physical_time` | `percentage` → `spo2[]` |
+| `daily-oxygen-saturation` (hmm) | daily | `daily_oxygen_saturation.date` | `averagePercentage`/`lowerBoundPercentage`/`upperBoundPercentage` → `dailySpo2.avgPct/lowerPct/upperPct` |
+| `respiratory-rate-sleep-summary` (hmm) | sample (per sleep) | `respiratory_rate_sleep_summary.sample_time.physical_time` | `full/light/deep/remSleepStats.breathsPerMinute` → `respiratory.*Brpm` (summary closest to the main session) |
+| `daily-respiratory-rate` (hmm) | daily | `daily_respiratory_rate.date` | `breathsPerMinute` → `respiratory.fullSleepBrpm` fallback |
+| `daily-sleep-temperature-derivations` (hmm) | daily | `daily_sleep_temperature_derivations.date` | `nightlyTemperatureCelsius − baselineTemperatureCelsius` → `skinTempDeltaC` (absent until Google has a baseline) |
+| `steps` (activity) | interval, 1 min | `steps.interval.start_time` | `count` (string) → `steps[]` |
+| `sedentary-period` (activity) | interval | `sedentary_period.interval.start_time` | `interval` → `stillPeriods[]` |
+
+(hmm = `health_metrics_and_measurements.readonly`, activity = `activity_and_fitness.readonly`.)
 
 `metadata.processed = false` means "sleep period detected, stages still
 processing" — the field that tells us whether **tonight's** sleep is visible
@@ -66,8 +93,11 @@ before you wake up.
 ```
 packages/core/src/providers/googleHealth/
   types.ts     schema subset · api.ts client + filters · oauth.ts URL/exchange/refresh/TokenManager
-  mapping.ts   → SleepSession / per-minute SleepSample · provider.ts GoogleHealthProvider + probe()
-  __fixtures__/ realistic responses built from the schema · *.test.ts
+  mapping.ts   → SleepSession / per-minute SleepSample / every NightData field · provider.ts GoogleHealthProvider + probe()
+  night.ts     fetchNightData(): all types for one night → NightData + per-type errors
+  __fixtures__/ realistic responses built from the schema (night/ = one file per type) · *.test.ts
+mobile/src/services/health.ts       syncNights() (Google or mock, 30-night backfill, 60 s floor) + useNights()
+mobile/src/healthStore.ts           persisted nights (cap 60) + per-type errors
 mobile/src/services/googleAuth.ts   PKCE sign-in (expo-auth-session) + SecureStore tokens
 server/src/providers/googleHealth/  DbTokenStore + factory · server/scripts/google-probe.ts
 server/src/api/routes.ts            /api/v1/auth/google/{start,callback,status}, DELETE /api/v1/auth/google,

@@ -2,6 +2,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { refreshTimetable } from './prayerTimes';
 import { replan } from './replan';
+import { startHealthAutoSync, syncNights } from './health';
 
 /**
  * Opportunistic daily refresh while the app is backgrounded (iOS decides
@@ -14,6 +15,8 @@ TaskManager.defineTask(REFRESH_TASK, async () => {
   try {
     await refreshTimetable();
     await replan();
+    // Health sync is best-effort, after alarms are re-armed, capped at 20 s of the task's budget.
+    await Promise.race([syncNights().catch(() => undefined), new Promise((r) => setTimeout(r, 20_000))]);
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {
     return BackgroundTask.BackgroundTaskResult.Failed;
@@ -21,6 +24,8 @@ TaskManager.defineTask(REFRESH_TASK, async () => {
 });
 
 export async function registerBackgroundRefresh(): Promise<void> {
+  // Foreground health sync (now + on every app foreground); 60 s floor inside.
+  startHealthAutoSync();
   try {
     const registered = await TaskManager.isTaskRegisteredAsync(REFRESH_TASK);
     if (!registered) await BackgroundTask.registerTaskAsync(REFRESH_TASK, { minimumInterval: 12 * 60 });

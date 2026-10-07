@@ -1,0 +1,107 @@
+{
+ "dataPoints": [
+  {
+   "steps": {
+    "interval": {
+     "startTime": "2026-07-04T01:41:00Z",
+     "endTime": "2026-07-04T01:42:00Z",
+     "startUtcOffset": "10800s",
+     "endUtcOffset": "10800s",
+     "civilStartTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 4,
+      "minutes": 41,
+      "seconds": 0
+     },
+     "civilEndTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 4,
+      "minutes": 42,
+      "seconds": 0
+     }
+    },
+    "count": "34"
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "steps": {
+    "interval": {
+     "startTime": "2026-07-03T20:06:00Z",
+     "endTime": "2026-07-03T20:07:00Z",
+     "startUtcOffset": "10800s",
+     "endUtcOffset": "10800s",
+     "civilStartTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 6,
+      "seconds": 0
+     },
+     "civilEndTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 7,
+      "seconds": 0
+     }
+    },
+    "count": "0"
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "steps": {
+    "interval": {
+     "startTime": "2026-07-03T20:05:00Z",
+     "endTime": "2026-07-03T20:06:00Z",
+     "startUtcOffset": "10800s",
+     "endUtcOffset": "10800s",
+     "civilStartTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 5,
+      "seconds": 0
+     },
+     "civilEndTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 6,
+      "seconds": 0
+     }
+    },
+    "count": "12"
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

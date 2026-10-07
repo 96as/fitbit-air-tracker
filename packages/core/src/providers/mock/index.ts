@@ -58,7 +58,7 @@ export class MockSleepProvider implements SleepDataProvider {
 }
 
 /** Deterministic PRNG (mulberry32) so tests and demos are reproducible. */
-function rng(seed: number): () => number {
+export function seededRandom(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a |= 0;
@@ -71,7 +71,7 @@ function rng(seed: number): () => number {
 
 /** Per-minute samples for one night: latency, then ~90-min cycles. */
 export function generateNight(startUtc: Date, hours: number, seed = 42): SleepSample[] {
-  const rand = rng(seed);
+  const rand = seededRandom(seed);
   const totalMin = Math.round(hours * 60);
   const stages: SleepStage[] = [];
 
