@@ -28,6 +28,7 @@ estimateStages(night: NightData):
   { method: 'hr-motion-v1' | 'hr-only-v1' | 'motion-only-v1'; confidence; segments } | null
 
 summarizeStages(segments, windowStartUtc?): StageSummary | null   // totals, WASO, awakenings, latency
+labelFor(result) / scoreLabel(score) / durationLabel(min)          // UI status labels (see below)
 METRIC_IDS, DEFAULT_SLEEP_NEED_MIN, DEFAULT_BASELINE_NIGHTS
 ```
 
@@ -105,13 +106,34 @@ can't see awakenings at all. Validated only on synthetic nights so far.
 Skipped entirely (no entry in `all`) when inputs are missing; `fajrWakeEase`
 is also skipped when `opts.nowUtc` is before Fajr + 15 min.
 
+## Labels (`MetricResult.label`)
+
+Every non-null result carries a short plain-English status (≤ 3 words),
+computed centrally in `labels.ts` from the value/components so all methods of a
+metric share the same bands. Null results have no label.
+
+| Metric | Label rule |
+|---|---|
+| `sleepDuration` | `"7h 12m"` |
+| `sleepScore`, `consistency` | ≥80 `Great` · ≥65 `Good` · ≥50 `Fair` · else `Poor` |
+| `recovery` | `Train hard` · `Train light` · `Rest` (same as the explanation's recommendation) |
+| `sleepDebt` | <30 min `On track` · <180 min `Slightly short` · else `Sleep debt` |
+| `breathing` | `Unusual` when flagged, else `Normal for you` |
+| `skinTemp` | ≥ +0.5 °C `Elevated` · ≤ −0.5 °C `Cooler` · else `Normal` |
+| `moodLink` | strongest factor: `Sleep length` · `Recovery` · `Sleep score`; \|r\| < 0.2 → `No clear link` |
+| `fajrWakeEase` | ≥70 `Easy` · ≥40 `Moderate` · else `Hard` |
+
 ## Baselines
 
 `computeBaselines` / `MetricsReport.baselines`: medians over the last
 `nights` (default 30) history nights — resting HR, rMSSD, breathing rate,
 SpO2, minutes asleep, bedtime (minutes from local midnight, negative = before
 midnight) and wake time. The engine also keeps robust SDs (1.4826 × MAD)
-internally for z-scores. A per-field baseline needs ≥3 contributing nights
+internally for z-scores. `baselines.counts` gives the number of nights that
+contributed to each field (`restingHrBpm`, `rmssdMs`, `respiratoryBrpm`,
+`spo2AvgPct`, `sleepMinutes`, `bedtimeMin`, `waketimeMin`) so the UI can show
+"still learning your normal (n/14 nights)"; it is omitted for empty history.
+A per-field baseline needs ≥3 contributing nights
 before relative scoring kicks in. Sources can mix across nights (e.g. a night
 with `restingHrBpm` vs one using lowest sleeping HR), which can bias a
 baseline by a few bpm — another reason to keep the source chain stable.
@@ -123,4 +145,5 @@ only / HR+steps no stages / nothing / single night no history / 30-night
 history; method sets, best selection, ranges, no NaN, non-empty one-line
 explanations, determinism, behaviour of each metric) and `staging.test.ts`
 (own staging vs synthetic ground truth, Cole–Kripke/Webster). Fixtures:
-`__fixtures__/nights.ts` (seeded synthetic nights driven by a true hypnogram).
+`__fixtures__/nights.ts` (seeded synthetic nights driven by a true hypnogram;
+excluded from the build output via `packages/core/tsconfig.json`).

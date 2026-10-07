@@ -97,7 +97,18 @@ export interface MetricResult {
   explanation: string;
   /** Optional sub-scores / parts (0–100 or raw), for the breakdown UI. */
   components?: Record<string, number>;
+  /** Short plain-English status for the UI (≤ 3 words), e.g. 'Train hard', 'Good', '7h 12m'. */
+  label?: string;
 }
+
+export type BaselineField =
+  | 'restingHrBpm'
+  | 'rmssdMs'
+  | 'respiratoryBrpm'
+  | 'spo2AvgPct'
+  | 'sleepMinutes'
+  | 'bedtimeMin'
+  | 'waketimeMin';
 
 /** Rolling personal baselines (median of the last N nights, default 30). */
 export interface Baselines {
@@ -110,6 +121,8 @@ export interface Baselines {
   /** Median bedtime / wake time as minutes after local midnight (bedtime may be negative = before midnight). */
   bedtimeMin?: number;
   waketimeMin?: number;
+  /** Nights that contributed a value, per field (for "still learning your normal (n/14 nights)"). */
+  counts?: Partial<Record<BaselineField, number>>;
 }
 
 export interface MetricsReport {

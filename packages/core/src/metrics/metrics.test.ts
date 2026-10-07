@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MetricsReport, NightData } from '../health/types.js';
-import { computeBaselines, computeNightMetrics } from './index.js';
+import { computeBaselines, computeNightMetrics, durationLabel, scoreLabel } from './index.js';
 import { TIERS, addDaysLocal, makeHistory, makeNight } from './__fixtures__/nights.js';
 
 const DATE = '2026-10-08';
@@ -27,6 +27,12 @@ function checkInvariants(r: MetricsReport) {
       expect(x.explanation.trim().length).toBeGreaterThan(10);
       expect(x.explanation).not.toMatch(/\n|NaN|undefined|Infinity/);
       expect(['high', 'medium', 'low']).toContain(x.confidence);
+      if (x.value !== null) {
+        expect(typeof x.label).toBe('string');
+        expect(x.label!.trim().split(/\s+/).length).toBeLessThanOrEqual(3);
+      } else {
+        expect(x.label).toBeUndefined();
+      }
       for (const v of Object.values(x.components ?? {})) expect(Number.isFinite(v)).toBe(true);
     }
   }
@@ -41,7 +47,11 @@ function checkInvariants(r: MetricsReport) {
     }
   }
   if (r.all.recovery) {
-    for (const x of r.all.recovery) expect(x.explanation).toMatch(/Recommendation: (train hard|train light|rest)\.$/);
+    for (const x of r.all.recovery) {
+      const m = x.explanation.match(/Recommendation: (train hard|train light|rest)\.$/);
+      expect(m).not.toBeNull();
+      expect(x.label!.toLowerCase()).toBe(m![1]);
+    }
   }
 }
 
@@ -74,6 +84,17 @@ describe('computeNightMetrics — data tiers', () => {
     expect(r.best.moodLink!.confidence).toBe('medium');
     expect(methods(r, 'fajrWakeEase')).toEqual(['stages-v1', 'own-staging-v1']);
     expect(r.baselines.nights).toBe(30);
+    expect(r.baselines.counts).toEqual({
+      restingHrBpm: 30, rmssdMs: 30, respiratoryBrpm: 30, spo2AvgPct: 30, sleepMinutes: 30, bedtimeMin: 30, waketimeMin: 30,
+    });
+    expect(r.best.sleepDuration!.label).toMatch(/^\d+h \d{2}m$/);
+    expect(['Great', 'Good', 'Fair', 'Poor']).toContain(r.best.sleepScore!.label);
+    expect(['Great', 'Good', 'Fair', 'Poor']).toContain(r.best.consistency!.label);
+    expect(['On track', 'Slightly short', 'Sleep debt']).toContain(r.best.sleepDebt!.label);
+    expect(r.best.breathing!.label).toBe('Normal for you');
+    expect(r.best.skinTemp!.label).toBe('Normal');
+    expect(['Sleep length', 'Recovery', 'Sleep score']).toContain(r.best.moodLink!.label);
+    expect(['Easy', 'Moderate', 'Hard']).toContain(r.best.fajrWakeEase!.label);
     expect(r.baselines.restingHrBpm).toBeGreaterThan(50);
     expect(r.baselines.rmssdMs).toBeGreaterThan(30);
     expect(r.baselines.sleepMinutes).toBeGreaterThan(300);
@@ -182,6 +203,9 @@ describe('metric behaviour', () => {
     expect(fever.best.recovery!.components!.tempPenalty).toBeGreaterThan(20);
     expect(fever.best.recovery!.explanation).toMatch(/Recommendation: rest\.$/);
     expect(fever.best.skinTemp!.explanation).toMatch(/illness/);
+    expect(fever.best.skinTemp!.label).toBe('Elevated');
+    expect(fever.best.recovery!.label).toBe('Rest');
+    expect(good.best.recovery!.label).toBe('Train hard');
   });
 
   it('breathing flags unusual values in wellness language only', () => {
@@ -193,6 +217,7 @@ describe('metric behaviour', () => {
       expect(x.explanation).toMatch(/not a diagnosis/);
       expect(x.explanation).toMatch(/consider talking to a doctor/);
       expect(x.components!.unusual).toBe(1);
+      expect(x.label).toBe('Unusual');
     }
     const spo2 = high.all.breathing!.find((x) => x.method === 'spo2-v1')!;
     expect(spo2.components!.minutesBelow90).toBeGreaterThan(0);
@@ -205,8 +230,10 @@ describe('metric behaviour', () => {
     const r = computeNightMetrics(nights[6]!, nights.slice(0, 6), { sleepNeedMin: 480 });
     expect(r.best.sleepDebt!.value).toBe(7 * 120);
     expect(r.best.sleepDebt!.confidence).toBe('high');
+    expect(r.best.sleepDebt!.label).toBe('Sleep debt');
     const r2 = computeNightMetrics(nights[6]!, nights.slice(0, 6), { sleepNeedMin: 360 });
     expect(r2.best.sleepDebt!.value).toBe(0);
+    expect(r2.best.sleepDebt!.label).toBe('On track');
   });
 
   it('consistency rewards a regular schedule over an irregular one', () => {
@@ -247,6 +274,8 @@ describe('metric behaviour', () => {
     expect(d.value!).toBeLessThan(40);
     expect(l.value!).toBeGreaterThan(70);
     expect(d.explanation).toMatch(/deep sleep/);
+    expect(d.label).toBe('Hard');
+    expect(l.label).toBe('Easy');
     const early = computeNightMetrics(light, [], { fajrUtc: fajr, nowUtc: fajr });
     expect(early.all.fajrWakeEase).toBeUndefined();
     expect(computeNightMetrics(light, []).all.fajrWakeEase).toBeUndefined();
@@ -271,9 +300,23 @@ describe('computeBaselines', () => {
     expect(b3.sleepMinutes).toBeGreaterThan(0);
     expect(b3.bedtimeMin).toBeLessThan(0); // ~22:40 → negative minutes
     expect(b3.waketimeMin).toBeGreaterThan(0);
+    expect(b3.counts).toEqual({ restingHrBpm: 3, rmssdMs: 0, respiratoryBrpm: 0, spo2AvgPct: 0, sleepMinutes: 3, bedtimeMin: 3, waketimeMin: 3 });
+    // a night missing RHR contributes to the other fields only
+    const mixed = [...hist, makeNight({ dateLocal: DATE, seed: 99, fields: ['stages'] }).night];
+    const bm = computeBaselines(mixed);
+    expect(bm.counts!.restingHrBpm).toBe(6);
+    expect(bm.counts!.sleepMinutes).toBe(7);
   });
 
   it('empty history', () => {
     expect(computeBaselines([])).toEqual({ nights: 0 });
+  });
+
+  it('labelFor bands', () => {
+    expect(scoreLabel(80)).toBe('Great');
+    expect(scoreLabel(65)).toBe('Good');
+    expect(scoreLabel(50)).toBe('Fair');
+    expect(scoreLabel(49)).toBe('Poor');
+    expect(durationLabel(432)).toBe('7h 12m');
   });
 });
