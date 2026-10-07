@@ -17,6 +17,20 @@ Conventions for every task:
 
 ## Phase M — iPhone app (primary product; see docs/MOBILE.md)
 
+> **Oct 2026 build (docs/BUILD_PLAN.md) — merged:** multi-method metrics
+> (docs/METRICS.md), all Air data types → `NightData` + phone sync, predictive
+> light-sleep wake for late data, dashboards (Today/Trends/Mood) on the live
+> pipeline, on-device calorie checker (docs/FOOD.md). Verified: 172 tests,
+> build, tsc, expo export, prebuild (entitlements empty), simulator runs.
+> **Still needs the device:** M1.1 below; M2.1 with the new scopes (reconnect
+> Google — `activity_and_fitness` added); M7 food model on the iPhone.
+
+### [ ] M7 On-device food model check (iPhone 17 Pro)
+Download Gemma 4 E2B on Wi-Fi (3.4 GB), analyse 5 real meals incl. Saudi
+dishes; record time per photo, JSON validity, whether iOS kills the app
+(→ switch default to Qwen3-VL 2B). Verify pause/resume + SHA-256.
+**Accept:** results written here; default model decided.
+
 ### [x] M1 Standalone Expo app with AlarmKit, custom wake times, Bedside smart wake, backup chain
 Done: `mobile/` + shared `packages/core`. Verified by type-check, Metro bundle
 and prebuild; needs a first real run on a Mac (`npx expo run:ios --device`).
