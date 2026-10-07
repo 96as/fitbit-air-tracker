@@ -14,7 +14,9 @@
       "infoPlist": {
         "NSAlarmKitUsageDescription": "SmartWake schedules alarms that ring until you stop them, so you never miss Fajr.",
         "NSLocationWhenInUseUsageDescription": "Your location is used only to compute local prayer times.",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": ["audio"],
+        "NSCameraUsageDescription": "Take a photo of your meal so the on-phone model can estimate calories and protein. Photos never leave your phone.",
+        "NSPhotoLibraryUsageDescription": "Pick a meal photo to estimate calories and protein on your phone. Photos never leave your phone."
       }
     },
     "android": {
@@ -33,7 +35,13 @@
       "expo-audio",
       "expo-location",
       "expo-background-task",
-      "expo-dev-client"
+      "expo-dev-client",
+      ["expo-image-picker", {
+        "photosPermission": "Pick a meal photo to estimate calories and protein on your phone. Photos never leave your phone.",
+        "cameraPermission": "Take a photo of your meal so the on-phone model can estimate calories and protein. Photos never leave your phone.",
+        "microphonePermission": false
+      }],
+      ["llama.rn", { "enableEntitlements": false, "enableOpenCLAndHexagon": false }]
     ]
   }
 }

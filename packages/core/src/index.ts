@@ -14,3 +14,4 @@ export * from './prayer/next.js';
 export * from './alarms/plan.js';
 export * from './util/tz.js';
 export { newId } from './util/id.js';
+export * from './nutrition/index.js';
