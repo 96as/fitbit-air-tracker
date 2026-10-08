@@ -15,7 +15,7 @@ and Google's open-source CLI (`github.com/Google-Health-API/google-health-cli`).
    personal use; the "Restricted scopes" review only applies if you publish.
 4. **Credentials ▸ Create credentials ▸ OAuth client ID**, one per client:
    - **iOS** (for the iPhone app): bundle ID = `ios.bundleIdentifier` in
-     `mobile/app.json` (`com.smartwake.prayer` unless you changed it). Copy
+     `mobile/app.json` (`com.as96.smartwake` unless you changed it). Copy
      the **Client ID** (there is no secret for iOS clients — PKCE is used).
    - **Web application** (for the server / web app / Raspberry Pi):
      Authorized redirect URI = `http://localhost:3001/api/v1/auth/google/callback`

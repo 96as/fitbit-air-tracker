@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.smartwake.prayer",
+      "bundleIdentifier": "com.as96.smartwake",
       "supportsTablet": false,
       "infoPlist": {
         "NSAlarmKitUsageDescription": "SmartWake schedules alarms that ring until you stop them, so you never miss Fajr.",
