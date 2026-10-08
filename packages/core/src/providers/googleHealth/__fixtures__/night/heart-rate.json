@@ -1,0 +1,172 @@
+{
+ "dataPoints": [
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-04T01:38:00Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 4,
+      "minutes": 38,
+      "seconds": 0
+     }
+    },
+    "beatsPerMinute": 72,
+    "metadata": {
+     "sensorLocation": "WRIST",
+     "motionContext": "ACTIVE"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-04T00:00:00Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 3,
+      "minutes": 0,
+      "seconds": 0
+     }
+    },
+    "beatsPerMinute": "60",
+    "metadata": {
+     "sensorLocation": "WRIST"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-03T21:00:00Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "hours": 0,
+      "minutes": 0,
+      "seconds": 0
+     }
+    },
+    "beatsPerMinute": "52",
+    "metadata": {
+     "sensorLocation": "WRIST",
+     "motionContext": "SEDENTARY"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-03T20:30:45Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 30,
+      "seconds": 45
+     }
+    },
+    "beatsPerMinute": "57",
+    "metadata": {
+     "sensorLocation": "WRIST",
+     "motionContext": "SEDENTARY"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-03T20:30:25Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 30,
+      "seconds": 25
+     }
+    },
+    "beatsPerMinute": "58",
+    "metadata": {
+     "sensorLocation": "WRIST",
+     "motionContext": "SEDENTARY"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  },
+  {
+   "heartRate": {
+    "sampleTime": {
+     "physicalTime": "2026-07-03T20:30:05Z",
+     "utcOffset": "10800s",
+     "civilTime": {
+      "year": 2026,
+      "month": 7,
+      "day": 3,
+      "hours": 23,
+      "minutes": 30,
+      "seconds": 5
+     }
+    },
+    "beatsPerMinute": "56",
+    "metadata": {
+     "sensorLocation": "WRIST",
+     "motionContext": "SEDENTARY"
+    }
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

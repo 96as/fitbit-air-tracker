@@ -1,0 +1,24 @@
+{
+ "dataPoints": [
+  {
+   "dailySleepTemperatureDerivations": {
+    "date": {
+     "year": 2026,
+     "month": 7,
+     "day": 4
+    },
+    "nightlyTemperatureCelsius": 34.12,
+    "baselineTemperatureCelsius": 33.9,
+    "relativeNightlyStddev30dCelsius": 0.21
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

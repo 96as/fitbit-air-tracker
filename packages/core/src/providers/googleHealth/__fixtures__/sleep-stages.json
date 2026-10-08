@@ -1,0 +1,47 @@
+{
+  "dataPoints": [
+    {
+      "name": "users/me/dataTypes/sleep/dataPoints/44598780531",
+      "sleep": {
+        "interval": {
+          "startTime": "2026-07-03T20:12:00Z",
+          "endTime": "2026-07-04T01:40:00Z",
+          "startUtcOffset": "10800s",
+          "endUtcOffset": "10800s",
+          "civilStartTime": { "year": 2026, "month": 7, "day": 3, "hours": 23, "minutes": 12 },
+          "civilEndTime": { "year": 2026, "month": 7, "day": 4, "hours": 4, "minutes": 40 }
+        },
+        "type": "STAGES",
+        "stages": [
+          { "type": "AWAKE", "startTime": "2026-07-03T20:12:00Z", "endTime": "2026-07-03T20:20:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "LIGHT", "startTime": "2026-07-03T20:20:00Z", "endTime": "2026-07-03T20:45:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "DEEP", "startTime": "2026-07-03T20:45:00Z", "endTime": "2026-07-03T21:30:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "LIGHT", "startTime": "2026-07-03T21:30:00Z", "endTime": "2026-07-03T21:50:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "REM", "startTime": "2026-07-03T21:50:00Z", "endTime": "2026-07-03T22:15:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "LIGHT", "startTime": "2026-07-03T22:15:00Z", "endTime": "2026-07-03T23:10:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "DEEP", "startTime": "2026-07-03T23:10:00Z", "endTime": "2026-07-03T23:40:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "RESTLESS", "startTime": "2026-07-03T23:40:00Z", "endTime": "2026-07-03T23:43:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "REM", "startTime": "2026-07-03T23:43:00Z", "endTime": "2026-07-04T00:30:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "LIGHT", "startTime": "2026-07-04T00:30:00Z", "endTime": "2026-07-04T01:35:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" },
+          { "type": "AWAKE", "startTime": "2026-07-04T01:35:00Z", "endTime": "2026-07-04T01:40:00Z", "startUtcOffset": "10800s", "endUtcOffset": "10800s" }
+        ],
+        "summary": {
+          "minutesAsleep": "312",
+          "minutesAwake": "16",
+          "minutesInSleepPeriod": "328",
+          "minutesToFallAsleep": "8",
+          "stagesSummary": [
+            { "type": "AWAKE", "minutes": "16", "count": "3" },
+            { "type": "LIGHT", "minutes": "165", "count": "4" },
+            { "type": "DEEP", "minutes": "75", "count": "2" },
+            { "type": "REM", "minutes": "72", "count": "2" }
+          ]
+        },
+        "metadata": { "processed": true, "nap": false, "mainSleep": true, "stagesStatus": "SUCCEEDED" },
+        "createTime": "2026-07-04T01:52:10Z",
+        "updateTime": "2026-07-04T01:52:10Z"
+      },
+      "dataSource": { "platform": "FITBIT", "recordingMethod": "PASSIVELY_MEASURED" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "dataPoints": [
+    {
+      "name": "users/me/dataTypes/sleep/dataPoints/44598780999",
+      "sleep": {
+        "interval": { "startTime": "2026-07-04T11:05:00Z", "endTime": "2026-07-04T11:40:00Z", "startUtcOffset": "-18000s", "endUtcOffset": "-18000s" },
+        "type": "CLASSIC",
+        "summary": { "minutesAsleep": "33", "minutesAwake": "2", "minutesInSleepPeriod": "35" },
+        "metadata": { "processed": true, "nap": true, "mainSleep": false, "stagesStatus": "REJECTED_NAP" }
+      }
+    }
+  ]
+}

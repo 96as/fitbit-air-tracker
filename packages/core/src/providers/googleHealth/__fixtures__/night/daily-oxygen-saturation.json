@@ -1,0 +1,25 @@
+{
+ "dataPoints": [
+  {
+   "dailyOxygenSaturation": {
+    "date": {
+     "year": 2026,
+     "month": 7,
+     "day": 4
+    },
+    "averagePercentage": 96.3,
+    "lowerBoundPercentage": 94.0,
+    "upperBoundPercentage": 98.0,
+    "standardDeviationPercentage": 0.6
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

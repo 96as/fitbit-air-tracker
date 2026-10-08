@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "SmartWake",
+    "slug": "smartwake",
+    "scheme": "smartwake",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.as96.smartwake",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAlarmKitUsageDescription": "SmartWake schedules alarms that ring until you stop them, so you never miss Fajr.",
+        "NSLocationWhenInUseUsageDescription": "Your location is used only to compute local prayer times.",
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSCameraUsageDescription": "Take a photo of your meal so the on-phone model can estimate calories and protein. Photos never leave your phone.",
+        "NSPhotoLibraryUsageDescription": "Pick a meal photo to estimate calories and protein on your phone. Photos never leave your phone."
+      }
+    },
+    "android": {
+      "package": "com.smartwake.prayer",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": [
+      "./plugins/withoutPushEntitlement",
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "26.0"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/alarm.wav"
+          ]
+        }
+      ],
+      "expo-audio",
+      "expo-location",
+      "expo-background-task",
+      "expo-dev-client",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pick a meal photo to estimate calories and protein on your phone. Photos never leave your phone.",
+          "cameraPermission": "Take a photo of your meal so the on-phone model can estimate calories and protein. Photos never leave your phone.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": false,
+          "enableOpenCLAndHexagon": false
+        }
+      ]
+    ]
+  }
+}

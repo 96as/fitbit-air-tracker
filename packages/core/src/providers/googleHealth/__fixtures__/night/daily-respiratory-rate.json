@@ -1,0 +1,22 @@
+{
+ "dataPoints": [
+  {
+   "dailyRespiratoryRate": {
+    "date": {
+     "year": 2026,
+     "month": 7,
+     "day": 4
+    },
+    "breathsPerMinute": 14.1
+   },
+   "dataSource": {
+    "recordingMethod": "PASSIVELY_MEASURED",
+    "platform": "FITBIT",
+    "device": {
+     "displayName": "Fitbit Air"
+    }
+   }
+  }
+ ],
+ "nextPageToken": ""
+}
